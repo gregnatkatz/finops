@@ -420,7 +420,8 @@ function App() {
         const data = await res.json()
         if (data.success) {
           setDiscoveryResult(data)
-          toast.success('Discovery completed', { description: `Found ${data.summary.total} resources` })
+          const totalResources = data.total ?? data.summary?.total ?? 0
+          toast.success('Discovery completed', { description: `Found ${totalResources} resources` })
         } else {
           toast.error('Discovery failed', { description: data.message })
         }
