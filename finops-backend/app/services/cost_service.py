@@ -115,23 +115,33 @@ class CostService:
             )
         )
         
-        result = self.azure.cost_client.query.usage(
-            scope=self.scope,
-            parameters=query
-        )
-        
-        services = []
-        if result.rows:
-            for row in result.rows:
-                services.append({
-                    "service": row[0],
-                    "cost": float(row[1]),
-                    "currency": row[2] if len(row) > 2 else "USD"
-                })
-        
-        # Sort by cost descending
-        services.sort(key=lambda x: x["cost"], reverse=True)
-        return services
+        try:
+            result = self.azure.cost_client.query.usage(
+                scope=self.scope,
+                parameters=query
+            )
+            
+            if result is None:
+                print("[get_costs_by_service] Azure API returned None")
+                return []
+            
+            services = []
+            if result.rows:
+                # Azure returns: ServiceName (0), Cost (1), Currency (2)
+                for row in result.rows:
+                    services.append({
+                        "service": row[0] if row[0] else "Unknown",
+                        "cost": float(row[1]) if row[1] is not None else 0.0,
+                        "currency": row[2] if len(row) > 2 else "USD"
+                    })
+            
+            # Sort by cost descending
+            services.sort(key=lambda x: x["cost"], reverse=True)
+            print(f"[get_costs_by_service] Found {len(services)} services")
+            return services
+        except Exception as e:
+            print(f"[get_costs_by_service] Error: {type(e).__name__}: {e}")
+            raise
     
     def get_costs_by_resource_group(self, days: int = 30) -> List[Dict[str, Any]]:
         """

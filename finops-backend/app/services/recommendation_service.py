@@ -130,6 +130,17 @@ class RecommendationService:
             }
         }
     
+    def get_total_savings(self) -> float:
+        """
+        Get total potential savings from all recommendations.
+        """
+        try:
+            all_recs = self.get_all_recommendations()
+            return all_recs.get("summary", {}).get("total_potential_savings", 0)
+        except Exception as e:
+            print(f"Error getting total savings: {e}")
+            return 0.0
+    
     def get_ri_coverage(self) -> Dict[str, Any]:
         """
         Get current RI coverage percentage.

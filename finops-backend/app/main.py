@@ -1765,29 +1765,117 @@ async def discover_azure_resources():
         
         # Get real Azure resources
         azure_client = AzureClientManager()
-        resource_summary = azure_client.list_resources()
+        resource_result = azure_client.list_resources()
         
         # Get real cost data
         cost_service = CostService()
         cost_summary = cost_service.get_cost_summary()
+        monthly_spend = cost_summary.get("monthly_spend", 0)
+        
+        # Build response with categories
+        categories = resource_result.get("categories", {})
+        total_resources = resource_result.get("total", 0)
+        permission_error = resource_result.get("permission_error", False)
+        
+        # Cost-based fallback: if ARM returns 0 resources but we have spend, use cost data
+        cost_based_discovery = None
+        if total_resources == 0 and monthly_spend > 0 and not permission_error:
+            # Get cost breakdown by service as fallback
+            try:
+                services_with_cost = cost_service.get_costs_by_service(days=30)
+                cost_based_discovery = categorize_services_by_cost(services_with_cost)
+                print(f"[discovery] Using cost-based fallback: {len(services_with_cost)} services with spend")
+            except Exception as e:
+                print(f"[discovery] Cost-based fallback failed: {e}")
         
         azure_config_store["last_discovery"] = datetime.utcnow().isoformat()
-        azure_config_store["resources_discovered"] = resource_summary.get("total", 0)
+        azure_config_store["resources_discovered"] = total_resources
         
         return {
             "success": True,
             "message": "Discovery completed",
-            "summary": resource_summary,
+            "categories": categories,
+            "total": total_resources,
+            "permission_error": permission_error,
+            "cost_based_discovery": cost_based_discovery,
+            "discovery_mode": "cost_based" if cost_based_discovery else "arm",
             "cost_summary": {
-                "monthly_spend": cost_summary.get("monthly_spend", 0),
+                "monthly_spend": monthly_spend,
                 "potential_savings": cost_summary.get("ai_savings", 0),
-                "ri_coverage": 0,  # No RIs configured
-                "sp_coverage": 0   # No SPs configured
+                "ri_coverage": 0,
+                "sp_coverage": 0
             }
         }
     except Exception as e:
         print(f"Discovery error: {e}")
         return {"success": False, "message": f"Discovery failed: {str(e)}"}
+
+def categorize_services_by_cost(services: list) -> dict:
+    """Categorize Azure services by cost into FinOps-friendly buckets."""
+    categories = {
+        "compute": {"count": 0, "cost": 0, "services": []},
+        "databases": {"count": 0, "cost": 0, "services": []},
+        "storage": {"count": 0, "cost": 0, "services": []},
+        "containers": {"count": 0, "cost": 0, "services": []},
+        "app_services": {"count": 0, "cost": 0, "services": []},
+        "networking": {"count": 0, "cost": 0, "services": []},
+        "analytics": {"count": 0, "cost": 0, "services": []},
+        "ai_ml": {"count": 0, "cost": 0, "services": []},
+        "security": {"count": 0, "cost": 0, "services": []},
+        "other": {"count": 0, "cost": 0, "services": []},
+    }
+    
+    for svc in services:
+        service_name = (svc.get("service") or "").lower()
+        cost = svc.get("cost", 0)
+        service_info = {"name": svc.get("service"), "cost": round(cost, 2)}
+        
+        if any(t in service_name for t in ["virtual machine", "vm ", "compute"]):
+            categories["compute"]["count"] += 1
+            categories["compute"]["cost"] += cost
+            categories["compute"]["services"].append(service_info)
+        elif any(t in service_name for t in ["sql", "cosmos", "database", "postgresql", "mysql", "redis"]):
+            categories["databases"]["count"] += 1
+            categories["databases"]["cost"] += cost
+            categories["databases"]["services"].append(service_info)
+        elif any(t in service_name for t in ["storage", "blob", "disk", "backup"]):
+            categories["storage"]["count"] += 1
+            categories["storage"]["cost"] += cost
+            categories["storage"]["services"].append(service_info)
+        elif any(t in service_name for t in ["kubernetes", "container", "aks"]):
+            categories["containers"]["count"] += 1
+            categories["containers"]["cost"] += cost
+            categories["containers"]["services"].append(service_info)
+        elif any(t in service_name for t in ["app service", "function", "logic app", "web app"]):
+            categories["app_services"]["count"] += 1
+            categories["app_services"]["cost"] += cost
+            categories["app_services"]["services"].append(service_info)
+        elif any(t in service_name for t in ["network", "bandwidth", "load balancer", "vpn", "dns", "cdn", "front door"]):
+            categories["networking"]["count"] += 1
+            categories["networking"]["cost"] += cost
+            categories["networking"]["services"].append(service_info)
+        elif any(t in service_name for t in ["synapse", "databricks", "data factory", "event hub", "stream"]):
+            categories["analytics"]["count"] += 1
+            categories["analytics"]["cost"] += cost
+            categories["analytics"]["services"].append(service_info)
+        elif any(t in service_name for t in ["cognitive", "machine learning", "openai", "ai ", "search"]):
+            categories["ai_ml"]["count"] += 1
+            categories["ai_ml"]["cost"] += cost
+            categories["ai_ml"]["services"].append(service_info)
+        elif any(t in service_name for t in ["key vault", "security", "defender", "sentinel"]):
+            categories["security"]["count"] += 1
+            categories["security"]["cost"] += cost
+            categories["security"]["services"].append(service_info)
+        else:
+            categories["other"]["count"] += 1
+            categories["other"]["cost"] += cost
+            categories["other"]["services"].append(service_info)
+    
+    # Round costs
+    for cat in categories.values():
+        cat["cost"] = round(cat["cost"], 2)
+    
+    return categories
 
 # Control configuration storage
 control_settings = {

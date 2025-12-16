@@ -80,40 +80,81 @@ class AzureClientManager:
         return self._resource_client
     
     def list_resources(self) -> dict:
-        """List all resources in the subscription and categorize them."""
-        resources = list(self.resource_client.resources.list())
-        
-        # Categorize resources by type
+        """List all resources in the subscription and categorize them with details."""
+        # Extended categories for better FinOps visibility
         categories = {
-            "virtual_machines": 0,
-            "sql_databases": 0,
-            "storage_accounts": 0,
-            "kubernetes_clusters": 0,
-            "app_services": 0,
-            "networking": 0,
-            "other": 0
+            "compute": {"count": 0, "resources": []},
+            "databases": {"count": 0, "resources": []},
+            "storage": {"count": 0, "resources": []},
+            "containers": {"count": 0, "resources": []},
+            "app_services": {"count": 0, "resources": []},
+            "networking": {"count": 0, "resources": []},
+            "analytics": {"count": 0, "resources": []},
+            "ai_ml": {"count": 0, "resources": []},
+            "security": {"count": 0, "resources": []},
+            "other": {"count": 0, "resources": []},
         }
         
-        for resource in resources:
-            resource_type = resource.type.lower() if resource.type else ""
-            
-            if "virtualmachines" in resource_type:
-                categories["virtual_machines"] += 1
-            elif "sql" in resource_type or "database" in resource_type:
-                categories["sql_databases"] += 1
-            elif "storageaccounts" in resource_type:
-                categories["storage_accounts"] += 1
-            elif "kubernetes" in resource_type or "containerservice" in resource_type:
-                categories["kubernetes_clusters"] += 1
-            elif "sites" in resource_type or "appservice" in resource_type:
-                categories["app_services"] += 1
-            elif "network" in resource_type or "virtualnetwork" in resource_type or "publicip" in resource_type:
-                categories["networking"] += 1
-            else:
-                categories["other"] += 1
+        result = {
+            "categories": categories,
+            "total": 0,
+            "permission_error": False
+        }
         
-        categories["total"] = len(resources)
-        return categories
+        try:
+            print(f"[list_resources] Listing resources for subscription: {self.subscription_id}")
+            resources = list(self.resource_client.resources.list())
+            print(f"[list_resources] Found {len(resources)} resources")
+            
+            for resource in resources:
+                resource_type = resource.type.lower() if resource.type else ""
+                resource_info = {
+                    "name": resource.name,
+                    "type": resource.type,
+                    "location": resource.location,
+                    "resource_group": resource.id.split("/")[4] if resource.id and len(resource.id.split("/")) > 4 else ""
+                }
+                
+                # Categorize by resource type
+                if any(t in resource_type for t in ["virtualmachines", "vmss", "availabilitysets"]):
+                    categories["compute"]["count"] += 1
+                    categories["compute"]["resources"].append(resource_info)
+                elif any(t in resource_type for t in ["sql", "cosmosdb", "documentdb", "postgresql", "mysql", "mariadb", "redis"]):
+                    categories["databases"]["count"] += 1
+                    categories["databases"]["resources"].append(resource_info)
+                elif any(t in resource_type for t in ["storageaccounts", "disks", "snapshots", "blob"]):
+                    categories["storage"]["count"] += 1
+                    categories["storage"]["resources"].append(resource_info)
+                elif any(t in resource_type for t in ["kubernetes", "containerservice", "containerinstance", "containerregistry", "containerapps"]):
+                    categories["containers"]["count"] += 1
+                    categories["containers"]["resources"].append(resource_info)
+                elif any(t in resource_type for t in ["sites", "serverfarms", "functions", "logicapps", "staticsite"]):
+                    categories["app_services"]["count"] += 1
+                    categories["app_services"]["resources"].append(resource_info)
+                elif any(t in resource_type for t in ["network", "virtualnetwork", "publicip", "loadbalancer", "applicationgateway", "firewall", "dns", "frontdoor", "cdn"]):
+                    categories["networking"]["count"] += 1
+                    categories["networking"]["resources"].append(resource_info)
+                elif any(t in resource_type for t in ["synapse", "databricks", "datafactory", "eventhub", "streamanalytics", "hdinsight"]):
+                    categories["analytics"]["count"] += 1
+                    categories["analytics"]["resources"].append(resource_info)
+                elif any(t in resource_type for t in ["cognitiveservices", "machinelearning", "openai", "search"]):
+                    categories["ai_ml"]["count"] += 1
+                    categories["ai_ml"]["resources"].append(resource_info)
+                elif any(t in resource_type for t in ["keyvault", "managedidentity", "security"]):
+                    categories["security"]["count"] += 1
+                    categories["security"]["resources"].append(resource_info)
+                else:
+                    categories["other"]["count"] += 1
+                    categories["other"]["resources"].append(resource_info)
+            
+            result["total"] = len(resources)
+            
+        except Exception as e:
+            print(f"[list_resources] Error listing resources: {type(e).__name__}: {e}")
+            result["permission_error"] = True
+            result["error_message"] = str(e)
+        
+        return result
 
 
 # Singleton instance
