@@ -420,7 +420,8 @@ function App() {
         const data = await res.json()
         if (data.success) {
           setDiscoveryResult(data)
-          toast.success('Discovery completed', { description: `Found ${data.summary.total} resources` })
+          const totalResources = data.total ?? data.summary?.total ?? 0
+          toast.success('Discovery completed', { description: `Found ${totalResources} resources` })
         } else {
           toast.error('Discovery failed', { description: data.message })
         }
@@ -1642,14 +1643,18 @@ function App() {
                 {discoveryResult ? (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
-                      {Object.entries(discoveryResult.summary).filter(([k]) => k !== 'total').map(([key, value]) => (
-                        <div key={key} className="bg-slate-800/50 rounded-lg p-3"><p className="text-xs text-slate-400 capitalize">{key.replace('_', ' ')}</p><p className="text-xl font-bold text-white">{String(value)}</p></div>
+                      {Object.entries(discoveryResult.categories || discoveryResult.summary || {}).filter(([k]) => k !== 'total' && k !== 'permission_error' && k !== 'error_message').map(([key, value]) => (
+                        <div key={key} className="bg-slate-800/50 rounded-lg p-3">
+                          <p className="text-xs text-slate-400 capitalize">{key.replace(/_/g, ' ')}</p>
+                          <p className="text-xl font-bold text-white">{typeof value === 'object' ? (value as any).count || 0 : String(value)}</p>
+                        </div>
                       ))}
                     </div>
                     <div className="border-t border-slate-800 pt-4">
-                      <div className="flex justify-between text-sm"><span className="text-slate-400">Total Resources</span><span className="text-white font-bold">{discoveryResult.summary.total}</span></div>
-                      <div className="flex justify-between text-sm mt-2"><span className="text-slate-400">Monthly Spend</span><span className="text-white font-bold">${(discoveryResult.cost_summary.monthly_spend/1000).toFixed(0)}K</span></div>
-                      <div className="flex justify-between text-sm mt-2"><span className="text-slate-400">Potential Savings</span><span className="text-green-400 font-bold">${(discoveryResult.cost_summary.potential_savings/1000).toFixed(0)}K</span></div>
+                      <div className="flex justify-between text-sm"><span className="text-slate-400">Total Resources</span><span className="text-white font-bold">{discoveryResult.total ?? discoveryResult.summary?.total ?? 0}</span></div>
+                      <div className="flex justify-between text-sm mt-2"><span className="text-slate-400">Monthly Spend</span><span className="text-white font-bold">${discoveryResult.cost_summary?.monthly_spend ? (discoveryResult.cost_summary.monthly_spend >= 1000 ? (discoveryResult.cost_summary.monthly_spend/1000).toFixed(1) + 'K' : '$' + discoveryResult.cost_summary.monthly_spend.toFixed(0)) : '0'}</span></div>
+                      <div className="flex justify-between text-sm mt-2"><span className="text-slate-400">Potential Savings</span><span className="text-green-400 font-bold">${discoveryResult.cost_summary?.potential_savings ? (discoveryResult.cost_summary.potential_savings >= 1000 ? (discoveryResult.cost_summary.potential_savings/1000).toFixed(1) + 'K' : discoveryResult.cost_summary.potential_savings.toFixed(0)) : '0'}</span></div>
+                      {discoveryResult.discovery_mode === 'cost_based' && <p className="text-xs text-amber-400 mt-2">Based on cost data (Reader role needed for full inventory)</p>}
                     </div>
                   </div>
                 ) : (
