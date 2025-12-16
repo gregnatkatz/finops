@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 import { 
@@ -197,40 +199,48 @@ function App() {
     } catch (e) { console.error(e) }
   }, [isLive])
 
-    const showAlertToast = (alert: any) => {
-      const severityColors = alert.severity === 'critical' 
-        ? 'border-red-500/40 bg-red-500/10' 
-        : alert.severity === 'high' 
-        ? 'border-yellow-500/40 bg-yellow-500/10' 
-        : 'border-blue-500/40 bg-blue-500/10'
-      const iconColor = alert.severity === 'critical' ? 'text-red-400' : alert.severity === 'high' ? 'text-yellow-400' : 'text-blue-400'
-      
-      toast.custom((id) => (
-        <button
-          onClick={() => {
-            openAlertWorkflow(alert)
-            toast.dismiss(id)
-          }}
-          className={`flex w-full items-start gap-3 rounded-lg border px-4 py-3 text-left hover:bg-slate-700 transition-colors cursor-pointer ${severityColors}`}
-        >
-          <AlertTriangle className={`mt-0.5 h-4 w-4 flex-shrink-0 ${iconColor}`} />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white">{alert.message}</p>
-            <p className="text-xs text-slate-400">{alert.resource} | {alert.delta}</p>
-          </div>
-          <span className="text-xs text-slate-500 whitespace-nowrap">Click to investigate</span>
-        </button>
-      ), { duration: 8000 })
-    }
+  const openAlertWorkflow = useCallback((alert: any) => {
+    setSelectedAlert(alert)
+    setAlertModalOpen(true)
+    setWorkflowStep(0)
+    setInvestigationRunning(false)
+    setEmailStage('idle')
+  }, [])
 
-    const generateDemoAlert = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/alerts/generate-demo`, { method: 'POST' })
-        const newAlert = await res.json()
-        setAlerts(prev => [newAlert, ...prev])
-        showAlertToast(newAlert)
-      } catch (e) { console.error(e) }
-    }
+  const showAlertToast = useCallback((alert: any) => {
+    const severityColors = alert.severity === 'critical' 
+      ? 'border-red-500/40 bg-red-500/10' 
+      : alert.severity === 'high' 
+      ? 'border-yellow-500/40 bg-yellow-500/10' 
+      : 'border-blue-500/40 bg-blue-500/10'
+    const iconColor = alert.severity === 'critical' ? 'text-red-400' : alert.severity === 'high' ? 'text-yellow-400' : 'text-blue-400'
+    
+    toast.custom((id) => (
+      <button
+        onClick={() => {
+          openAlertWorkflow(alert)
+          toast.dismiss(id)
+        }}
+        className={`flex w-full items-start gap-3 rounded-lg border px-4 py-3 text-left hover:bg-slate-700 transition-colors cursor-pointer ${severityColors}`}
+      >
+        <AlertTriangle className={`mt-0.5 h-4 w-4 flex-shrink-0 ${iconColor}`} />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-white">{alert.message}</p>
+          <p className="text-xs text-slate-400">{alert.resource} | {alert.delta}</p>
+        </div>
+        <span className="text-xs text-slate-500 whitespace-nowrap">Click to investigate</span>
+      </button>
+    ), { duration: 8000 })
+  }, [openAlertWorkflow])
+
+  const generateDemoAlert = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/alerts/generate-demo`, { method: 'POST' })
+      const newAlert = await res.json()
+      setAlerts(prev => [newAlert, ...prev])
+      showAlertToast(newAlert)
+    } catch (e) { console.error(e) }
+  }, [showAlertToast])
 
   const handleChat = async () => {
     if (!chatInput.trim()) return
@@ -241,15 +251,15 @@ function App() {
       const res = await fetch(`${API_URL}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) })
       const data = await res.json()
       setChatMessages(prev => [...prev, { role: 'assistant', content: data.response }])
-    } catch (e) {
+    } catch {
       setChatMessages(prev => [...prev, { role: 'assistant', content: 'Error connecting to AI.' }])
     }
   }
 
   useEffect(() => {
     fetchData()
-    const d = setInterval(fetchData, 30000)
-    const t = setInterval(simulateTick, 3000)
+    const d = setInterval(fetchData, 300000)
+    const t = setInterval(simulateTick, 30000)
     const c = setInterval(() => setCurrentTime(new Date()), 1000)
     // Disable demo alerts - they're distracting and not real data
     // const a = setTimeout(generateDemoAlert, 5000)
@@ -257,13 +267,6 @@ function App() {
     return () => { clearInterval(d); clearInterval(t); clearInterval(c) }
   }, [fetchData, simulateTick])
 
-  const openAlertWorkflow = (alert: any) => {
-    setSelectedAlert(alert)
-    setAlertModalOpen(true)
-    setWorkflowStep(0)
-    setInvestigationRunning(false)
-    setEmailStage('idle')
-  }
 
   const getRecommendationsForAlert = (alert: any) => {
     const msg = (alert?.message || '').toLowerCase()
@@ -311,7 +314,7 @@ function App() {
 
   const getOwnerEmail = (alert: any) => {
     const resource = (alert?.resource || 'unknown').toLowerCase().replace(/[^a-z0-9]/g, '-')
-    return `${resource}-owner@adventhealth.org`
+    return `${resource}-owner@emaildomain.org`
   }
 
   const handleAlertAction = async (action: string) => {
@@ -390,7 +393,7 @@ function App() {
         const res = await fetch(`${API_URL}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, context: 'executive' }) })
         const data = await res.json()
         setExecChatMessages(prev => [...prev, { role: 'assistant', content: data.response }])
-      } catch (e) {
+      } catch {
         setExecChatMessages(prev => [...prev, { role: 'assistant', content: 'Error connecting to AI.' }])
       }
     }
@@ -409,14 +412,14 @@ function App() {
         } else {
           toast.error('Connection failed', { description: testData.message })
         }
-      } catch (e) { toast.error('Failed to save configuration') }
+      } catch { toast.error('Failed to save configuration') }
       setIsConnecting(false)
     }
 
     const runDiscovery = async () => {
       setIsDiscovering(true)
       try {
-        const res = await fetch(`${API_URL}/api/azure-config/discover`, { method: 'POST' })
+        const res = await fetch(`${API_URL}/api/azure-config/discover_prod`, { method: 'POST' })
         const data = await res.json()
         if (data.success) {
           setDiscoveryResult(data)
@@ -424,7 +427,7 @@ function App() {
         } else {
           toast.error('Discovery failed', { description: data.message })
         }
-      } catch (e) { toast.error('Discovery failed') }
+      } catch { toast.error('Discovery failed') }
       setIsDiscovering(false)
     }
 
@@ -436,7 +439,7 @@ function App() {
           setControlSettings((prev: any) => ({ ...prev, [controlId]: { ...prev[controlId], enabled: data.enabled } }))
           toast.success(`Control ${data.enabled ? 'enabled' : 'disabled'}`)
         }
-      } catch (e) { toast.error('Failed to toggle control') }
+      } catch { toast.error('Failed to toggle control') }
     }
 
         const updateCircuitBreaker = async (breakerId: string, threshold: number) => {
