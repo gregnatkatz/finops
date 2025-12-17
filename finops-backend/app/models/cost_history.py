@@ -190,3 +190,42 @@ class AnomalySnapshot(Base):
     # Metadata
     last_updated = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RISPAction(Base):
+    """RI/SP recommendation actions (approve, hold, block) with persistence."""
+    __tablename__ = "risp_actions"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    
+    # Recommendation identification
+    resource = Column(String(500), nullable=False)
+    recommendation_type = Column(String(100), nullable=True)  # e.g., "3-YEAR RI", "1-YEAR SP"
+    
+    # Action details
+    action = Column(String(50), nullable=False)  # approved, held, blocked
+    action_by = Column(String(255), nullable=True, default="admin@contosohealth.org")
+    action_by_name = Column(String(255), nullable=True, default="System Administrator")
+    notes = Column(String(1000), nullable=True)
+    
+    # Financial data
+    savings_monthly = Column(Float, default=0)
+    monthly_cost = Column(Float, default=0)
+    
+    # AI Analysis (populated when approving)
+    ai_analysis = Column(String(5000), nullable=True)
+    ai_confidence = Column(Float, nullable=True)
+    ai_risk_assessment = Column(String(500), nullable=True)
+    
+    # Azure Portal link
+    azure_portal_link = Column(String(1000), nullable=True)
+    
+    # Metadata
+    action_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        Index('ix_risp_action_resource', 'resource'),
+        Index('ix_risp_action_action', 'action'),
+    )

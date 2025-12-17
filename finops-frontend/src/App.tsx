@@ -1846,11 +1846,27 @@ function App() {
                                         <CheckCircle className="w-5 h-5 text-green-400" />
                                         <h4 className="font-semibold text-green-400">Approved ({rispActions.approved?.length || 0})</h4>
                                       </div>
-                                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                                      <div className="space-y-3 max-h-64 overflow-y-auto">
                                         {rispActions.approved?.map((r: any, i: number) => (
-                                          <div key={i} className="bg-green-900/30 rounded-lg p-2 text-sm">
+                                          <div key={i} className="bg-green-900/30 rounded-lg p-3 text-sm">
                                             <p className="text-white font-medium truncate">{r.recommendation_name || r.resource || r.recommendation || 'Recommendation'}</p>
                                             <p className="text-green-400 text-xs">{fmt(r.savings_monthly || r.savings || 0)}/mo savings</p>
+                                            {r.ai_analysis && (
+                                              <div className="mt-2 p-2 bg-slate-800/50 rounded text-xs">
+                                                <div className="flex items-center gap-1 text-blue-400 mb-1">
+                                                  <Brain className="w-3 h-3" />
+                                                  <span>AI Analysis</span>
+                                                  {r.ai_confidence && <span className="ml-auto text-slate-400">{Math.round(r.ai_confidence * 100)}% confidence</span>}
+                                                </div>
+                                                <p className="text-slate-300 line-clamp-2">{r.ai_analysis}</p>
+                                              </div>
+                                            )}
+                                            {r.azure_portal_link && (
+                                              <a href={r.azure_portal_link} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300">
+                                                <Globe className="w-3 h-3" />
+                                                Purchase in Azure Portal
+                                              </a>
+                                            )}
                                           </div>
                                         ))}
                                         {(!rispActions.approved || rispActions.approved.length === 0) && (

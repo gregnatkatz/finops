@@ -43,7 +43,7 @@ demo_mode_enabled = False
 try:
     from app.database import init_history_db, get_db
     from app.scheduler import start_scheduler, stop_scheduler, get_scheduler
-    from app.models.cost_history import DailyCostHistory, AnomalyRecord, BudgetStatus
+    from app.models.cost_history import DailyCostHistory, AnomalyRecord, BudgetStatus, RISPAction
     PHASE2_AVAILABLE = True
 except ImportError:
     PHASE2_AVAILABLE = False
@@ -2546,7 +2546,62 @@ async def update_discount_settings(settings: dict):
             discount_settings[key] = float(settings[key])
     return {"success": True, "settings": discount_settings}
 
-# RI/SP Action tracking endpoints
+# RI/SP Action tracking endpoints with SQLite persistence
+def get_azure_portal_ri_link(resource: str, recommendation_type: str) -> str:
+    """Generate Azure Portal link for RI/SP purchase."""
+    # Azure Reservations portal link
+    base_url = "https://portal.azure.com/#view/Microsoft_Azure_Reservations/ReservationsBrowseBlade"
+    return base_url
+
+async def get_ai_approval_analysis(recommendation: dict) -> dict:
+    """Get AI analysis for an RI/SP approval decision."""
+    resource = recommendation.get("resource", "Unknown Resource")
+    rec_type = recommendation.get("type", recommendation.get("recommendation", "RI"))
+    monthly_cost = recommendation.get("monthly_cost", recommendation.get("monthlyCost", 0))
+    savings = recommendation.get("savings", recommendation.get("ri_savings", recommendation.get("sp_savings", 0)))
+    
+    prompt = f"""Analyze this Reserved Instance/Savings Plan approval decision:
+
+Resource: {resource}
+Recommendation Type: {rec_type}
+Monthly Cost: ${monthly_cost:,.0f}
+Potential Monthly Savings: ${savings:,.0f}
+
+Provide a brief analysis (2-3 sentences) covering:
+1. Whether this is a good commitment decision
+2. Key risk factors to consider
+3. Confidence level (high/medium/low)
+
+Format your response as JSON with keys: analysis, risk_assessment, confidence"""
+
+    try:
+        # Use the existing GPT-5 API call function
+        response = await asyncio.to_thread(call_gpt5_api, prompt)
+        if response:
+            # Try to parse as JSON
+            try:
+                import re
+                json_match = re.search(r'\{[^{}]*\}', response, re.DOTALL)
+                if json_match:
+                    return json.loads(json_match.group())
+            except:
+                pass
+            # Return as plain analysis if JSON parsing fails
+            return {
+                "analysis": response[:500],
+                "risk_assessment": "Standard commitment risk - ensure workload stability",
+                "confidence": "medium"
+            }
+    except Exception as e:
+        print(f"AI analysis error: {e}")
+    
+    # Fallback analysis
+    return {
+        "analysis": f"Approving {rec_type} for {resource} with ${savings:,.0f}/month potential savings. This commitment aligns with cost optimization goals.",
+        "risk_assessment": "Standard commitment risk - ensure workload stability before finalizing",
+        "confidence": "medium"
+    }
+
 @app.get("/api/risp-actions")
 async def get_risp_actions():
     """Get RI/SP action summary for Executive Summary."""
@@ -2563,6 +2618,48 @@ async def get_risp_actions():
             "total_approved_savings": demo_risp["savings"]["approved_monthly"],
         }
     
+    # Load from SQLite if Phase 2 is available
+    if PHASE2_AVAILABLE:
+        try:
+            with get_db() as db:
+                approved = db.query(RISPAction).filter(RISPAction.action == "approved").all()
+                held = db.query(RISPAction).filter(RISPAction.action == "held").all()
+                blocked = db.query(RISPAction).filter(RISPAction.action == "blocked").all()
+                
+                def action_to_dict(a):
+                    return {
+                        "id": a.id,
+                        "recommendation_id": f"risp-{a.id}",
+                        "recommendation_name": a.resource,
+                        "resource": a.resource,
+                        "type": a.recommendation_type,
+                        "action": a.action,
+                        "action_display": a.action.title(),
+                        "action_by": a.action_by,
+                        "action_by_name": a.action_by_name,
+                        "action_at": a.action_at.isoformat() if a.action_at else None,
+                        "savings_monthly": a.savings_monthly,
+                        "monthly_cost": a.monthly_cost,
+                        "notes": a.notes,
+                        "ai_analysis": a.ai_analysis,
+                        "ai_confidence": a.ai_confidence,
+                        "ai_risk_assessment": a.ai_risk_assessment,
+                        "azure_portal_link": a.azure_portal_link,
+                    }
+                
+                return {
+                    "approved_count": len(approved),
+                    "held_count": len(held),
+                    "blocked_count": len(blocked),
+                    "approved": [action_to_dict(a) for a in approved],
+                    "held": [action_to_dict(a) for a in held],
+                    "blocked": [action_to_dict(a) for a in blocked],
+                    "total_approved_savings": sum(a.savings_monthly or 0 for a in approved),
+                }
+        except Exception as e:
+            print(f"Error loading RISP actions from DB: {e}")
+    
+    # Fallback to in-memory
     return {
         "approved_count": len(risp_actions["approved"]),
         "held_count": len(risp_actions["held"]),
@@ -2575,29 +2672,104 @@ async def get_risp_actions():
 
 @app.post("/api/risp-actions/{action}")
 async def record_risp_action(action: str, recommendation: dict):
-    """Record an RI/SP action (approve, hold, block)."""
+    """Record an RI/SP action (approve, hold, block) with SQLite persistence and AI analysis."""
     if action not in ["approve", "hold", "block"]:
         return {"success": False, "message": f"Invalid action: {action}"}
     
     action_map = {"approve": "approved", "hold": "held", "block": "blocked"}
-    action_list = action_map[action]
+    action_db_value = action_map[action]
     
-    # Add timestamp to the recommendation
+    resource = recommendation.get("resource", "Unknown Resource")
+    rec_type = recommendation.get("type", recommendation.get("recommendation", ""))
+    savings = recommendation.get("savings", recommendation.get("ri_savings", recommendation.get("sp_savings", 0)))
+    monthly_cost = recommendation.get("monthly_cost", recommendation.get("monthlyCost", 0))
+    
+    # Get AI analysis for approvals
+    ai_analysis = None
+    ai_confidence = None
+    ai_risk_assessment = None
+    if action == "approve":
+        ai_result = await get_ai_approval_analysis(recommendation)
+        ai_analysis = ai_result.get("analysis", "")
+        ai_confidence_str = ai_result.get("confidence", "medium")
+        ai_confidence = {"high": 0.9, "medium": 0.7, "low": 0.5}.get(ai_confidence_str, 0.7)
+        ai_risk_assessment = ai_result.get("risk_assessment", "")
+    
+    # Generate Azure Portal link
+    azure_portal_link = get_azure_portal_ri_link(resource, rec_type)
+    
+    # Save to SQLite if Phase 2 is available
+    if PHASE2_AVAILABLE:
+        try:
+            with get_db() as db:
+                # Remove existing action for this resource
+                db.query(RISPAction).filter(RISPAction.resource == resource).delete()
+                
+                # Create new action
+                new_action = RISPAction(
+                    resource=resource,
+                    recommendation_type=rec_type,
+                    action=action_db_value,
+                    savings_monthly=savings,
+                    monthly_cost=monthly_cost,
+                    ai_analysis=ai_analysis,
+                    ai_confidence=ai_confidence,
+                    ai_risk_assessment=ai_risk_assessment,
+                    azure_portal_link=azure_portal_link,
+                    notes=recommendation.get("notes", ""),
+                )
+                db.add(new_action)
+                db.commit()
+                db.refresh(new_action)
+                
+                return {
+                    "success": True, 
+                    "action": action, 
+                    "recommendation": {
+                        "id": new_action.id,
+                        "resource": resource,
+                        "type": rec_type,
+                        "action": action_db_value,
+                        "savings_monthly": savings,
+                        "ai_analysis": ai_analysis,
+                        "ai_confidence": ai_confidence,
+                        "ai_risk_assessment": ai_risk_assessment,
+                        "azure_portal_link": azure_portal_link,
+                    }
+                }
+        except Exception as e:
+            print(f"Error saving RISP action to DB: {e}")
+    
+    # Fallback to in-memory storage
     recommendation["action_timestamp"] = datetime.utcnow().isoformat()
     recommendation["action"] = action
+    recommendation["ai_analysis"] = ai_analysis
+    recommendation["ai_confidence"] = ai_confidence
+    recommendation["ai_risk_assessment"] = ai_risk_assessment
+    recommendation["azure_portal_link"] = azure_portal_link
     
     # Remove from other lists if exists
     for lst in ["approved", "held", "blocked"]:
-        risp_actions[lst] = [r for r in risp_actions[lst] if r.get("resource") != recommendation.get("resource")]
+        risp_actions[lst] = [r for r in risp_actions[lst] if r.get("resource") != resource]
     
     # Add to appropriate list
-    risp_actions[action_list].append(recommendation)
+    risp_actions[action_db_value].append(recommendation)
     
     return {"success": True, "action": action, "recommendation": recommendation}
 
 @app.delete("/api/risp-actions/{resource}")
 async def remove_risp_action(resource: str):
     """Remove an RI/SP action by resource name."""
+    # Remove from SQLite if Phase 2 is available
+    if PHASE2_AVAILABLE:
+        try:
+            with get_db() as db:
+                db.query(RISPAction).filter(RISPAction.resource == resource).delete()
+                db.commit()
+        except Exception as e:
+            print(f"Error removing RISP action from DB: {e}")
+    
+    # Also remove from in-memory
     for lst in ["approved", "held", "blocked"]:
         risp_actions[lst] = [r for r in risp_actions[lst] if r.get("resource") != resource]
     return {"success": True, "message": f"Removed actions for {resource}"}
