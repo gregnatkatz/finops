@@ -6,7 +6,7 @@ import {
   Search, Bell, RefreshCw, Settings, Clock,
   Cloud, Layers, Lock, Key, Globe, Server,
   Power, Sliders, MessageSquare, Send, X, Save, Play, Loader2, Database,
-  Upload, FileText
+  Upload, FileText, XCircle
 } from 'lucide-react'
 import { 
   Line, AreaChart, Area, BarChart, Bar, 
