@@ -916,8 +916,21 @@ function App() {
         </div>
             </header>
 
+            {/* Loading Overlay for Mode Transition */}
+            {demoModeLoading && (
+              <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center">
+                <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 flex flex-col items-center gap-4 shadow-2xl">
+                  <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-white">Switching Data Mode</p>
+                    <p className="text-sm text-slate-400 mt-1">{demoMode ? 'Returning to live Azure data...' : 'Loading demo data...'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Demo Mode Banner */}
-            {demoMode && (
+            {demoMode && !demoModeLoading && (
               <div className="bg-purple-500/20 border-b border-purple-500/30 px-6 py-2">
                 <div className="flex items-center justify-center gap-2 text-purple-300 text-sm">
                   <Database className="w-4 h-4" />
