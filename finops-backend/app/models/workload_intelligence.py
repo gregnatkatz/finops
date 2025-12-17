@@ -82,7 +82,7 @@ class Workload(Base):
     
     # Demo data flag - separates seed data from user-created data
     is_demo = Column(Boolean, default=False, index=True)
-    demo_scenario = Column(String(100), nullable=True)  # e.g., "adventhealth", "contoso"
+    demo_scenario = Column(String(100), nullable=True)  # e.g., "contosohealth"
     
     # Relationships
     evaluations = relationship("TechnologyEvaluation", back_populates="workload")

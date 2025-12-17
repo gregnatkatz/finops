@@ -679,12 +679,12 @@ def seed_phase3_demo_data():
         
         # Create demo workloads
         workloads_data = [
-            {"name": "Patient Front Door", "description": "Patient scheduling, check-in, and call center application running on SQL Server and Windows VMs", "owner_name": "Jennifer Martinez", "owner_email": "jennifer.martinez@adventhealth.org", "status": "evaluating", "criticality": "mission_critical"},
-            {"name": "PACS Imaging", "description": "Picture Archiving and Communication System for radiology imaging storage and retrieval", "owner_name": "Dr. Sarah Chen", "owner_email": "sarah.chen@adventhealth.org", "status": "active", "criticality": "mission_critical"},
-            {"name": "Epic Integration", "description": "Epic EHR integration layer running on RHEL VMs", "owner_name": "Mike Johnson", "owner_email": "mike.johnson@adventhealth.org", "status": "active", "criticality": "mission_critical"},
-            {"name": "Data Analytics Platform", "description": "Azure Synapse-based analytics for population health insights", "owner_name": "Lisa Park", "owner_email": "lisa.park@adventhealth.org", "status": "evaluating", "criticality": "high"},
-            {"name": "ASR Disaster Recovery", "description": "Azure Site Recovery for business continuity", "owner_name": "Tom Williams", "owner_email": "tom.williams@adventhealth.org", "status": "active", "criticality": "high"},
-            {"name": "ML Training Pipeline", "description": "GPU-based machine learning for diagnostic imaging AI", "owner_name": "Dr. James Lee", "owner_email": "james.lee@adventhealth.org", "status": "active", "criticality": "standard"},
+            {"name": "Patient Front Door", "description": "Patient scheduling, check-in, and call center application running on SQL Server and Windows VMs", "owner_name": "Jennifer Martinez", "owner_email": "jennifer.martinez@contosohealth.org", "status": "evaluating", "criticality": "mission_critical"},
+            {"name": "PACS Imaging", "description": "Picture Archiving and Communication System for radiology imaging storage and retrieval", "owner_name": "Dr. Sarah Chen", "owner_email": "sarah.chen@contosohealth.org", "status": "active", "criticality": "mission_critical"},
+            {"name": "Epic Integration", "description": "Epic EHR integration layer running on RHEL VMs", "owner_name": "Mike Johnson", "owner_email": "mike.johnson@contosohealth.org", "status": "active", "criticality": "mission_critical"},
+            {"name": "Data Analytics Platform", "description": "Azure Synapse-based analytics for population health insights", "owner_name": "Lisa Park", "owner_email": "lisa.park@contosohealth.org", "status": "evaluating", "criticality": "high"},
+            {"name": "ASR Disaster Recovery", "description": "Azure Site Recovery for business continuity", "owner_name": "Tom Williams", "owner_email": "tom.williams@contosohealth.org", "status": "active", "criticality": "high"},
+            {"name": "ML Training Pipeline", "description": "GPU-based machine learning for diagnostic imaging AI", "owner_name": "Dr. James Lee", "owner_email": "james.lee@contosohealth.org", "status": "active", "criticality": "standard"},
         ]
         
         created_workloads = []
@@ -697,7 +697,7 @@ def seed_phase3_demo_data():
                 status=WorkloadStatus(wl_data["status"]),
                 criticality=wl_data["criticality"],
                 is_demo=True,  # Mark as demo data for persistence
-                demo_scenario="adventhealth"
+                demo_scenario="contosohealth"
             )
             db.add(wl)
             db.flush()
@@ -727,7 +727,7 @@ def seed_phase3_demo_data():
                 affected_azure_services=eval_data["affected_azure_services"],
                 executive_sponsor=eval_data.get("executive_sponsor"),
                 is_demo=True,  # Mark as demo data for persistence
-                demo_scenario="adventhealth"
+                demo_scenario="contosohealth"
             )
             db.add(ev)
         
@@ -1088,8 +1088,137 @@ async def get_mission_critical():
 # AI Agents - diversified with primary and validator agents
 @app.get("/api/agents")
 async def get_agents():
-    # Agents should always be shown - they analyze Azure data when connected
-    # The agents are the AI components, not Azure resources
+    # When Azure is configured, return agents with neutral descriptions (no fake dollar amounts)
+    # The agents are the AI components that analyze Azure data
+    
+    if is_azure_configured():
+        # Return agents with neutral descriptions - no hardcoded demo values
+        agents = [
+            # Primary Agents
+            {
+                "id": "sentinel",
+                "name": "Cost Sentinel",
+                "type": "Real-Time Guardian",
+                "role": "primary",
+                "azure_service": "Azure Monitor + Logic Apps",
+                "status": "active",
+                "accuracy": 97.3,
+                "last_action": "Monitoring for cost anomalies",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#ef4444",
+            },
+            {
+                "id": "commitment",
+                "name": "Commitment Advisor",
+                "type": "RI/SP Optimizer",
+                "role": "primary",
+                "azure_service": "Cost Management + Advisor",
+                "status": "active",
+                "accuracy": 94.8,
+                "last_action": "Analyzing RI/SP opportunities",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#8b5cf6",
+            },
+            {
+                "id": "orphan",
+                "name": "Orphan Hunter",
+                "type": "Waste Eliminator",
+                "role": "primary",
+                "azure_service": "Azure Advisor + Resource Graph",
+                "status": "active",
+                "accuracy": 99.1,
+                "last_action": "Scanning for unused resources",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#f59e0b",
+            },
+            {
+                "id": "rightsize",
+                "name": "Right-Size Engine",
+                "type": "Compute Optimizer",
+                "role": "primary",
+                "azure_service": "Azure Advisor + ML",
+                "status": "active",
+                "accuracy": 96.5,
+                "last_action": "Evaluating VM utilization",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#10b981",
+            },
+            # Validator/Secondary Agents
+            {
+                "id": "validator-cost",
+                "name": "Cost Validator",
+                "type": "Accuracy Checker",
+                "role": "validator",
+                "azure_service": "Azure AI Foundry",
+                "status": "active",
+                "accuracy": 98.2,
+                "last_action": "Validating cost analysis",
+                "actions_today": 0,
+                "validates": "sentinel",
+                "color": "#06b6d4",
+            },
+            {
+                "id": "validator-recommendation",
+                "name": "Recommendation Validator",
+                "type": "Decision Auditor",
+                "role": "validator",
+                "azure_service": "Azure ML + Cost API",
+                "status": "active",
+                "accuracy": 97.8,
+                "last_action": "Auditing recommendations",
+                "actions_today": 0,
+                "validates": "commitment",
+                "color": "#ec4899",
+            },
+            {
+                "id": "forecast",
+                "name": "Spend Prophet",
+                "type": "Predictive Forecaster",
+                "role": "primary",
+                "azure_service": "Azure ML + FOCUS",
+                "status": "active",
+                "accuracy": 91.2,
+                "last_action": "Generating cost forecast",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#3b82f6",
+            },
+            {
+                "id": "storage",
+                "name": "Storage Optimizer",
+                "type": "Tiering Agent",
+                "role": "primary",
+                "azure_service": "Storage Analytics + Lifecycle",
+                "status": "active",
+                "accuracy": 96.5,
+                "last_action": "Analyzing storage tiers",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#14b8a6",
+            },
+            {
+                "id": "gpt5",
+                "name": "GPT-5",
+                "type": "Advanced Reasoning",
+                "role": "primary",
+                "azure_service": "Azure OpenAI Service",
+                "status": "active",
+                "accuracy": 98.7,
+                "last_action": "Analyzing cost patterns",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#d946ef",
+                "model": "gpt-5",
+                "endpoint": "https://pharma-agents-jnj-resource.cognitiveservices.azure.com",
+            },
+        ]
+        return agents
+    
+    # Demo mode - return agents with example data
     agents = [
         # Primary Agents
         {
@@ -3038,7 +3167,11 @@ async def list_workloads():
         return {"workloads": []}
     
     with get_db() as db:
-        workloads = db.query(Workload).all()
+        # Filter out demo data when Azure is configured
+        if is_azure_configured():
+            workloads = db.query(Workload).filter(Workload.is_demo != True).all()
+        else:
+            workloads = db.query(Workload).all()
         return {
             "workloads": [
                 {
@@ -3145,7 +3278,11 @@ async def list_evaluations():
         return {"evaluations": []}
     
     with get_db() as db:
-        evaluations = db.query(TechnologyEvaluation).all()
+        # Filter out demo data when Azure is configured
+        if is_azure_configured():
+            evaluations = db.query(TechnologyEvaluation).filter(TechnologyEvaluation.is_demo != True).all()
+        else:
+            evaluations = db.query(TechnologyEvaluation).all()
         return {
             "evaluations": [
                 {
