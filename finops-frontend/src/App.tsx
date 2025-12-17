@@ -14,9 +14,15 @@ import {
 } from 'recharts'
 import { Toaster, toast } from 'sonner'
 
-// Use window.location.origin for tunnel access (avoids credentials in URL issue), or explicit VITE_API_URL if set
+// Use window.location.origin for tunnel access, stripping any embedded credentials
 const rawApiUrl = import.meta.env.VITE_API_URL;
-const API_URL = rawApiUrl && rawApiUrl.trim().length > 0 ? rawApiUrl : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000')
+const getCleanOrigin = () => {
+  if (typeof window === 'undefined') return 'http://localhost:8000';
+  // Strip credentials from URL if present (e.g., user:pass@host -> host)
+  const url = new URL(window.location.href);
+  return `${url.protocol}//${url.host}`;
+};
+const API_URL = rawApiUrl && rawApiUrl.trim().length > 0 ? rawApiUrl : getCleanOrigin()
 
 function App() {
   const [activeTab, setActiveTab] = useState('exec')
@@ -849,7 +855,6 @@ function App() {
                 <div className="flex items-center gap-3 mb-4">
                   <Activity className="w-5 h-5 text-orange-400" />
                   <h3 className="font-semibold text-white">Anomaly Resolution Timeline</h3>
-                  {stats?.data_source === 'azure_live' && <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">DEMO</span>}
                 </div>
                 <div className="space-y-3 max-h-80 overflow-y-auto">
                   {alerts.slice(0, 8).map((alert: any, i: number) => (
@@ -875,7 +880,6 @@ function App() {
                 <div className="flex items-center gap-3 mb-4">
                   <Shield className="w-5 h-5 text-blue-400" />
                   <h3 className="font-semibold text-white">Budget Guardrails</h3>
-                  {stats?.data_source === 'azure_live' && <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">DEMO</span>}
                 </div>
                 <div className="space-y-3">
                   {budgets.map((budget: any, i: number) => (
@@ -1329,10 +1333,10 @@ function App() {
           <div className="space-y-6">
             <div className="grid grid-cols-5 gap-4">
               {[
-                { l: 'CURRENT RI COVERAGE', v: `${stats?.ri_coverage || 35}%`, c: 'green' },
-                { l: 'CURRENT SP COVERAGE', v: `${stats?.sp_coverage || 25}%`, c: 'purple' },
-                { l: 'TARGET COVERAGE', v: `${stats?.target_coverage || 60}%`, c: 'white' },
-                { l: 'POTENTIAL SAVINGS', v: '$89K', c: 'green' },
+                { l: 'CURRENT RI COVERAGE', v: `${stats?.ri_coverage ?? 0}%`, c: 'green' },
+                { l: 'CURRENT SP COVERAGE', v: `${stats?.sp_coverage ?? 0}%`, c: 'purple' },
+                { l: 'TARGET COVERAGE', v: `${stats?.target_coverage ?? 25}%`, c: 'white' },
+                { l: 'POTENTIAL SAVINGS', v: `$${stats?.ri_savings_potential ? Math.round(stats.ri_savings_potential / 1000) + 'K' : stats?.ai_savings ? Math.round(stats.ai_savings) : '0'}`, c: 'green' },
                 { l: 'ACTIVE EVALUATIONS', v: `${evaluations.length}`, c: 'yellow' }
               ].map((s, i) => (
                 <div key={i} className="bg-slate-900 rounded-xl border border-slate-800 p-5">
