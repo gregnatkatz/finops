@@ -294,6 +294,13 @@ function App() {
       return () => { clearInterval(d); clearInterval(t); clearInterval(c) }
     }, [fetchData, simulateTick])
 
+    // Auto-fetch discovery results when Settings tab is viewed and Azure is configured
+    useEffect(() => {
+      if (activeTab === 'settings' && azureStatus?.configured && !discoveryResult && !isDiscovering) {
+        runDiscovery()
+      }
+    }, [activeTab, azureStatus?.configured])
+
   const openAlertWorkflow = (alert: any) => {
     setSelectedAlert(alert)
     setAlertModalOpen(true)
@@ -1010,15 +1017,15 @@ function App() {
                       <div key={i} className="p-3 bg-slate-800/50 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm text-white">{budget.name}</span>
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${budget.threshold_status === 'critical' ? 'bg-red-500/20 text-red-400' : budget.threshold_status === 'warning' ? 'bg-yellow-500/20 text-yellow-400' : budget.threshold_status === 'info' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
-                            {budget.percentage}%
-                          </span>
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${budget.threshold_status === 'critical' || budget.status === 'at_risk' ? 'bg-red-500/20 text-red-400' : budget.threshold_status === 'warning' ? 'bg-yellow-500/20 text-yellow-400' : budget.threshold_status === 'info' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
+                                                      {(budget.percentage || budget.percent_used || 0).toFixed(0)}%
+                                                    </span>
                         </div>
-                        <div className="w-full bg-slate-700 rounded-full h-2">
-                          <div className={`h-2 rounded-full ${budget.threshold_status === 'critical' ? 'bg-red-500' : budget.threshold_status === 'warning' ? 'bg-yellow-500' : budget.threshold_status === 'info' ? 'bg-blue-500' : 'bg-green-500'}`} style={{ width: `${Math.min(budget.percentage, 100)}%` }} />
-                        </div>
+                                                <div className="w-full bg-slate-700 rounded-full h-2">
+                                                  <div className={`h-2 rounded-full ${budget.threshold_status === 'critical' || budget.status === 'at_risk' ? 'bg-red-500' : budget.threshold_status === 'warning' ? 'bg-yellow-500' : budget.threshold_status === 'info' ? 'bg-blue-500' : 'bg-green-500'}`} style={{ width: `${Math.min(budget.percentage || budget.percent_used || 0, 100)}%` }} />
+                                                </div>
                         <div className="flex justify-between mt-1">
-                          <span className="text-xs text-slate-500">{fmt(budget.spent)} / {fmt(budget.budget)}</span>
+                          <span className="text-xs text-slate-500">{fmt(budget.spent)} / {fmt(budget.budget || budget.amount)}</span>
                           <span className={`text-xs ${budget.threshold_status === 'critical' ? 'text-red-400' : budget.threshold_status === 'warning' ? 'text-yellow-400' : 'text-slate-500'}`}>
                             {budget.threshold_status === 'critical' ? '⚠️ Over 90%' : budget.threshold_status === 'warning' ? '⚠️ Over 80%' : budget.threshold_status === 'info' ? 'ℹ️ Over 60%' : '✓ On track'}
                           </span>
@@ -1346,8 +1353,8 @@ function App() {
                 <div className="space-y-3">
                   {budgets.slice(0, 4).map((b: any) => (
                     <div key={b.id} className="space-y-1">
-                      <div className="flex justify-between text-xs"><span className="text-slate-400">{b.name.replace(' Budget', '')}</span><span className="text-white">${(b.current/1000).toFixed(0)}K / ${(b.allocated/1000).toFixed(0)}K</span></div>
-                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden"><div className={`h-full rounded-full ${b.status === 'critical' ? 'bg-red-500' : b.status === 'warning' ? 'bg-orange-500' : 'bg-green-500'}`} style={{ width: `${Math.min(100, (b.current / b.allocated) * 100)}%` }} /></div>
+                      <div className="flex justify-between text-xs"><span className="text-slate-400">{b.name.replace(' Budget', '')}</span><span className="text-white">${((b.spent || b.current || 0)/1000).toFixed(0)}K / ${((b.budget || b.amount || b.allocated || 0)/1000).toFixed(0)}K</span></div>
+                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden"><div className={`h-full rounded-full ${b.threshold_status === 'critical' || b.status === 'critical' || b.status === 'at_risk' ? 'bg-red-500' : b.threshold_status === 'warning' || b.status === 'warning' ? 'bg-orange-500' : 'bg-green-500'}`} style={{ width: `${Math.min(100, b.percentage || b.percent_used || ((b.spent || b.current || 0) / (b.budget || b.amount || b.allocated || 1)) * 100)}%` }} /></div>
                     </div>
                   ))}
                 </div>
@@ -1953,7 +1960,7 @@ function App() {
                     </div>
                     <div className="border-t border-slate-800 pt-4">
                       <div className="flex justify-between text-sm"><span className="text-slate-400">Total Resources</span><span className="text-white font-bold">{discoveryResult.total ?? discoveryResult.summary?.total ?? 0}</span></div>
-                      <div className="flex justify-between text-sm mt-2"><span className="text-slate-400">Monthly Spend</span><span className="text-white font-bold">${discoveryResult.cost_summary?.monthly_spend ? (discoveryResult.cost_summary.monthly_spend >= 1000 ? (discoveryResult.cost_summary.monthly_spend/1000).toFixed(1) + 'K' : '$' + discoveryResult.cost_summary.monthly_spend.toFixed(0)) : '0'}</span></div>
+                      <div className="flex justify-between text-sm mt-2"><span className="text-slate-400">Monthly Spend</span><span className="text-white font-bold">${discoveryResult.cost_summary?.monthly_spend ? (discoveryResult.cost_summary.monthly_spend >= 1000 ? (discoveryResult.cost_summary.monthly_spend/1000).toFixed(1) + 'K' : discoveryResult.cost_summary.monthly_spend.toFixed(0)) : '0'}</span></div>
                       <div className="flex justify-between text-sm mt-2"><span className="text-slate-400">Potential Savings</span><span className="text-green-400 font-bold">${discoveryResult.cost_summary?.potential_savings ? (discoveryResult.cost_summary.potential_savings >= 1000 ? (discoveryResult.cost_summary.potential_savings/1000).toFixed(1) + 'K' : discoveryResult.cost_summary.potential_savings.toFixed(0)) : '0'}</span></div>
                       {discoveryResult.discovery_mode === 'cost_based' && <p className="text-xs text-amber-400 mt-2">Based on cost data (Reader role needed for full inventory)</p>}
                     </div>
