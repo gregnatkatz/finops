@@ -511,7 +511,8 @@ function App() {
                 recommendation: recommendation.recommendation
               })
             })
-            toast.success(`Recommendation ${action}ed`)
+            const actionVerb = action === 'approve' ? 'approved' : action === 'hold' ? 'put on hold' : action === 'block' ? 'blocked' : action
+            toast.success(`Recommendation ${actionVerb}`)
             fetchData() // Refresh to update Executive Summary
           } catch (e) {
             toast.error(`Failed to ${action} recommendation`)
@@ -1773,6 +1774,66 @@ function App() {
                                     <div className="mt-4 p-3 bg-purple-900/30 rounded-lg"><p className="text-sm text-purple-400 font-medium">3-Year SP: Up to 52% savings</p><p className="text-sm text-purple-400">1-Year SP: Up to 33% savings</p></div>
                                   </div>
                                 </div>
+
+                                {/* Approved and On Hold Actions */}
+                                {(rispActions.approved?.length > 0 || rispActions.held?.length > 0 || rispActions.blocked?.length > 0) && (
+                                  <div className="grid grid-cols-3 gap-6 mt-6">
+                                    {/* Approved */}
+                                    <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-4">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <CheckCircle className="w-5 h-5 text-green-400" />
+                                        <h4 className="font-semibold text-green-400">Approved ({rispActions.approved?.length || 0})</h4>
+                                      </div>
+                                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        {rispActions.approved?.map((r: any, i: number) => (
+                                          <div key={i} className="bg-green-900/30 rounded-lg p-2 text-sm">
+                                            <p className="text-white font-medium truncate">{r.resource || r.recommendation || 'Recommendation'}</p>
+                                            <p className="text-green-400 text-xs">{fmt(r.savings || 0)}/mo savings</p>
+                                          </div>
+                                        ))}
+                                        {(!rispActions.approved || rispActions.approved.length === 0) && (
+                                          <p className="text-slate-500 text-sm">No approved recommendations</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {/* On Hold */}
+                                    <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <Clock className="w-5 h-5 text-yellow-400" />
+                                        <h4 className="font-semibold text-yellow-400">On Hold ({rispActions.held?.length || 0})</h4>
+                                      </div>
+                                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        {rispActions.held?.map((r: any, i: number) => (
+                                          <div key={i} className="bg-yellow-900/30 rounded-lg p-2 text-sm">
+                                            <p className="text-white font-medium truncate">{r.resource || r.recommendation || 'Recommendation'}</p>
+                                            <p className="text-yellow-400 text-xs">{fmt(r.savings || 0)}/mo savings</p>
+                                          </div>
+                                        ))}
+                                        {(!rispActions.held || rispActions.held.length === 0) && (
+                                          <p className="text-slate-500 text-sm">No recommendations on hold</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {/* Blocked */}
+                                    <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <XCircle className="w-5 h-5 text-red-400" />
+                                        <h4 className="font-semibold text-red-400">Blocked ({rispActions.blocked?.length || 0})</h4>
+                                      </div>
+                                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        {rispActions.blocked?.map((r: any, i: number) => (
+                                          <div key={i} className="bg-red-900/30 rounded-lg p-2 text-sm">
+                                            <p className="text-white font-medium truncate">{r.resource || r.recommendation || 'Recommendation'}</p>
+                                            <p className="text-red-400 text-xs">{fmt(r.savings || 0)}/mo savings</p>
+                                          </div>
+                                        ))}
+                                        {(!rispActions.blocked || rispActions.blocked.length === 0) && (
+                                          <p className="text-slate-500 text-sm">No blocked recommendations</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
