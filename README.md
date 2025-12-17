@@ -29,14 +29,14 @@ Reserved Instances (RI) and Savings Plans (SP) can reduce Azure compute costs by
 
 The Executive Summary provides a real-time view of your Azure FinOps posture:
 
-![Executive Summary with RI/SP Actions](screenshots/executive_summary_risp_actions.png)
+![Executive Summary](screenshots/01_executive_summary.png)
 
-- **Monthly Azure Cost**: $588K with daily rate tracking
-- **Monthly Savings**: $20K with month-over-month comparison
-- **Anomalies Resolved**: 9/12 this month with resolution timeline
-- **Budget Status**: ON TRACK with 4/6 budgets healthy
-- **RI Coverage**: 4% current vs 25% target
-- **Agent Savings**: $20K from 9 active AI agents
+- **Monthly Azure Cost**: $824K with daily rate tracking
+- **Monthly Savings**: $100K with month-over-month comparison
+- **Anomalies Resolved**: 4/6 this month with resolution timeline
+- **Budget Status**: WARNING with budget monitoring
+- **RI Coverage**: 18% current vs 45% target
+- **Agent Savings**: Real-time tracking from 5+ active AI agents
 
 The **RI/SP Recommendation Actions** card tracks all your commitment decisions:
 - Approved count with total approved savings
@@ -48,14 +48,14 @@ The **RI/SP Recommendation Actions** card tracks all your commitment decisions:
 
 The RI/SP Optimizer is the core decision-making interface:
 
-![RI/SP Optimizer with Decision Buttons](screenshots/risp_optimizer_with_buttons.png)
+![RI/SP Optimizer](screenshots/06_risp_optimizer.png)
 
 **Coverage Metrics**
-- Current RI Coverage: 4%
-- Current SP Coverage: 25%
-- Target Coverage: 25%
-- Potential Savings: $89K
-- Active Evaluations: 4
+- Current RI Coverage: 18%
+- Current SP Coverage: 12%
+- Target Coverage: 45%
+- Potential Savings: $100K
+- Active Evaluations: 3
 
 **Upcoming SaaS / Technology Evaluations**
 
@@ -120,7 +120,7 @@ Click any recommendation to open the deep-dive drawer with:
 
 ### Settings & Configuration
 
-![Settings - Discount Configuration](screenshots/settings_discount_settings.png)
+![Settings](screenshots/09_settings.png)
 
 **RI/SP Discount Settings**
 
