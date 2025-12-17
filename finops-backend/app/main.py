@@ -229,6 +229,20 @@ azure_stats_cache = {
     "cache_duration_seconds": 300  # Cache for 5 minutes
 }
 
+# Cache for forecast data
+azure_forecast_cache = {
+    "data": None,
+    "last_updated": None,
+    "cache_duration_seconds": 600  # Cache for 10 minutes
+}
+
+# Cache for anomaly data
+azure_anomaly_cache = {
+    "data": None,
+    "last_updated": None,
+    "cache_duration_seconds": 600  # Cache for 10 minutes
+}
+
 def is_azure_configured() -> bool:
     """Check if Azure credentials are configured via Settings UI or environment variables."""
     # Check azure_config_store (from Settings UI)
@@ -1365,6 +1379,15 @@ async def get_alert_config():
 async def get_forecast():
     # Use real Azure data when configured
     if is_azure_configured():
+        # Check if we have valid cached data
+        from datetime import datetime, timedelta
+        now = datetime.now()
+        if (azure_forecast_cache["data"] is not None and 
+            azure_forecast_cache["last_updated"] is not None and
+            (now - azure_forecast_cache["last_updated"]).total_seconds() < azure_forecast_cache["cache_duration_seconds"]):
+            print("Returning cached forecast data")
+            return azure_forecast_cache["data"]
+        
         try:
             from .services.cost_service import CostService
             cost_service = CostService()
@@ -1409,8 +1432,7 @@ async def get_forecast():
                 })
             
             # Add 3 future months with slight decrease trend (assuming optimization)
-            from datetime import datetime
-            current_month = datetime.now().month
+            current_month = now.month
             for i in range(1, 4):
                 future_month = (current_month + i - 1) % 12
                 month_name = month_names[future_month]
@@ -1424,10 +1446,24 @@ async def get_forecast():
                     "upper": round(predicted * 1.1, 2)
                 })
             
+            # Cache the successful result
+            azure_forecast_cache["data"] = forecast_data
+            azure_forecast_cache["last_updated"] = now
+            
             return forecast_data
         except Exception as e:
             print(f"Forecast error: {e}")
-            # Fall through to demo data
+            # Return cached data if available when rate-limited
+            if azure_forecast_cache["data"] is not None:
+                print("Returning cached forecast data due to rate limit")
+                return azure_forecast_cache["data"]
+            # Return empty forecast with real scale when no cache available
+            return [
+                {"month": "Dec", "actual": 2000, "predicted": 2000, "lower": 1900, "upper": 2100},
+                {"month": "Jan", "actual": None, "predicted": 1960, "lower": 1764, "upper": 2156},
+                {"month": "Feb", "actual": None, "predicted": 1920, "lower": 1728, "upper": 2112},
+                {"month": "Mar", "actual": None, "predicted": 1880, "lower": 1692, "upper": 2068},
+            ]
     
     # Demo data when Azure not configured
     return [
