@@ -13,7 +13,9 @@ from app.models.cost_history import (
     AnomalyRecord,
     BudgetStatus,
     RecommendationCache,
-    RICoverage
+    RICoverage,
+    StatsSnapshot,
+    AnomalySnapshot
 )
 
 logger = logging.getLogger(__name__)
@@ -257,6 +259,199 @@ async def detect_anomalies():
         
     except Exception as e:
         logger.error(f"Anomaly detection failed: {e}")
+
+
+async def refresh_stats_snapshot():
+    """
+    Fetch Azure stats and cache in snapshot table.
+    Runs every 5-10 minutes for fast retrieval.
+    """
+    logger.info("Starting stats snapshot refresh...")
+    
+    try:
+        from app.services.azure_client import is_azure_configured
+        
+        if not is_azure_configured():
+            logger.info("Azure not configured - skipping stats snapshot refresh")
+            return
+        
+        from app.services.cost_service import CostService
+        cost_service = CostService()
+        
+        # Get monthly spend
+        monthly_spend = 0
+        try:
+            daily_costs = cost_service.get_daily_costs(days=30)
+            monthly_spend = sum(d.get("cost", 0) for d in daily_costs)
+        except Exception as e:
+            logger.warning(f"Could not fetch daily costs: {e}")
+        
+        # Get AI savings from recommendations
+        ai_savings = 0
+        try:
+            from app.services.recommendation_service import RecommendationService
+            rec_service = RecommendationService()
+            recs = rec_service.get_all_recommendations()
+            for rec in recs.get("advisor_recommendations", []):
+                ai_savings += rec.get("annual_savings", 0) / 12  # Convert to monthly
+        except Exception as e:
+            logger.warning(f"Could not fetch recommendations: {e}")
+        
+        # Get budget status
+        budgets_on_track = 0
+        budgets_total = 0
+        try:
+            from app.services.budget_service import BudgetService
+            budget_service = BudgetService()
+            budgets = budget_service.get_all_budgets()
+            budgets_total = len(budgets)
+            budgets_on_track = sum(1 for b in budgets if b.get("spend_pct", 0) < 90)
+        except Exception as e:
+            logger.warning(f"Could not fetch budgets: {e}")
+        
+        # Get RI coverage
+        ri_coverage_pct = 0
+        try:
+            from app.services.recommendation_service import RecommendationService
+            rec_service = RecommendationService()
+            ri_coverage_pct = rec_service.get_ri_coverage()
+        except Exception as e:
+            logger.warning(f"Could not fetch RI coverage: {e}")
+        
+        # Store snapshot
+        with get_db() as db:
+            existing = db.query(StatsSnapshot).filter(
+                StatsSnapshot.snapshot_key == "current"
+            ).first()
+            
+            if existing:
+                existing.monthly_spend = monthly_spend
+                existing.ai_savings = ai_savings
+                existing.budgets_on_track = budgets_on_track
+                existing.budgets_total = budgets_total
+                existing.ri_coverage_pct = ri_coverage_pct
+                existing.last_updated = datetime.utcnow()
+            else:
+                snapshot = StatsSnapshot(
+                    snapshot_key="current",
+                    monthly_spend=monthly_spend,
+                    ai_savings=ai_savings,
+                    budgets_on_track=budgets_on_track,
+                    budgets_total=budgets_total,
+                    ri_coverage_pct=ri_coverage_pct
+                )
+                db.add(snapshot)
+            
+            db.commit()
+        
+        logger.info(f"Stats snapshot refresh complete - monthly_spend=${monthly_spend:,.0f}")
+        
+    except Exception as e:
+        logger.error(f"Stats snapshot refresh failed: {e}")
+
+
+async def refresh_anomaly_snapshot():
+    """
+    Fetch Azure anomaly data and cache in snapshot table.
+    Runs every 5-10 minutes.
+    """
+    logger.info("Starting anomaly snapshot refresh...")
+    
+    try:
+        from app.services.azure_client import is_azure_configured, get_azure_client
+        
+        if not is_azure_configured():
+            logger.info("Azure not configured - skipping anomaly snapshot refresh")
+            return
+        
+        anomaly_data = {"anomalies": [], "total_excess_cost": 0}
+        
+        try:
+            client = get_azure_client()
+            if client:
+                from azure.mgmt.costmanagement import CostManagementClient
+                from azure.identity import DefaultAzureCredential
+                import os
+                
+                subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
+                if subscription_id:
+                    credential = DefaultAzureCredential()
+                    cost_client = CostManagementClient(credential)
+                    
+                    scope = f"/subscriptions/{subscription_id}"
+                    alerts = list(cost_client.alerts.list(scope=scope))
+                    
+                    for alert in alerts:
+                        anomaly_data["anomalies"].append({
+                            "id": alert.id,
+                            "name": alert.name,
+                            "status": alert.status,
+                            "definition": str(alert.definition) if alert.definition else None
+                        })
+        except Exception as e:
+            logger.warning(f"Could not fetch anomaly data from Azure: {e}")
+        
+        # Store snapshot
+        with get_db() as db:
+            existing = db.query(AnomalySnapshot).filter(
+                AnomalySnapshot.snapshot_key == "current"
+            ).first()
+            
+            if existing:
+                existing.payload_json = json.dumps(anomaly_data)
+                existing.last_updated = datetime.utcnow()
+            else:
+                snapshot = AnomalySnapshot(
+                    snapshot_key="current",
+                    payload_json=json.dumps(anomaly_data)
+                )
+                db.add(snapshot)
+            
+            db.commit()
+        
+        logger.info(f"Anomaly snapshot refresh complete - {len(anomaly_data['anomalies'])} anomalies")
+        
+    except Exception as e:
+        logger.error(f"Anomaly snapshot refresh failed: {e}")
+
+
+def get_cached_stats():
+    """Get cached stats from snapshot table."""
+    try:
+        with get_db() as db:
+            snapshot = db.query(StatsSnapshot).filter(
+                StatsSnapshot.snapshot_key == "current"
+            ).first()
+            
+            if snapshot:
+                return {
+                    "monthly_spend": snapshot.monthly_spend,
+                    "ai_savings": snapshot.ai_savings,
+                    "budgets_on_track": snapshot.budgets_on_track,
+                    "budgets_total": snapshot.budgets_total,
+                    "ri_coverage_pct": snapshot.ri_coverage_pct,
+                    "last_updated": snapshot.last_updated.isoformat() if snapshot.last_updated else None
+                }
+    except Exception as e:
+        logger.error(f"Error getting cached stats: {e}")
+    
+    return None
+
+
+def get_cached_anomalies():
+    """Get cached anomalies from snapshot table."""
+    try:
+        with get_db() as db:
+            snapshot = db.query(AnomalySnapshot).filter(
+                AnomalySnapshot.snapshot_key == "current"
+            ).first()
+            
+            if snapshot and snapshot.payload_json:
+                return json.loads(snapshot.payload_json)
+    except Exception as e:
+        logger.error(f"Error getting cached anomalies: {e}")
+    
+    return None
 
 
 def _parse_date(date_val) -> date:

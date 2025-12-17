@@ -25,6 +25,20 @@ except Exception as e:
     AZURE_SERVICES_AVAILABLE = False
     print(f"Azure services not available - running in demo mode: {e}")
 
+# Demo data service import
+try:
+    from app.services.demo_data_service import DemoDataService
+    demo_data_service = DemoDataService()
+    DEMO_SERVICE_AVAILABLE = True
+    print("Demo data service loaded (ContosoHealth: 89 hospitals, $824.2K/month)")
+except Exception as e:
+    DEMO_SERVICE_AVAILABLE = False
+    demo_data_service = None
+    print(f"Demo data service not available: {e}")
+
+# Global demo mode state
+demo_mode_enabled = False
+
 # Phase 2 imports
 try:
     from app.database import init_history_db, get_db
@@ -781,10 +795,70 @@ async def shutdown():
 async def healthz():
     return {"status": "ok"}
 
+# ============ DEMO MODE ENDPOINTS ============
+@app.get("/api/demo/status")
+async def get_demo_status():
+    """Get current demo mode status."""
+    return {
+        "demo_mode": demo_mode_enabled,
+        "demo_scenario": "ContosoHealth" if demo_mode_enabled else None,
+        "demo_details": {
+            "hospitals": 89,
+            "monthly_spend": "$824.2K",
+            "savings_opportunity": "$100K"
+        } if demo_mode_enabled else None
+    }
+
+@app.post("/api/demo/toggle")
+async def toggle_demo_mode():
+    """Toggle demo mode on/off."""
+    global demo_mode_enabled
+    
+    if not DEMO_SERVICE_AVAILABLE:
+        raise HTTPException(503, "Demo data service not available")
+    
+    demo_mode_enabled = not demo_mode_enabled
+    
+    return {
+        "demo_mode": demo_mode_enabled,
+        "message": "Demo mode enabled - showing ContosoHealth sample data ($824.2K/month, 89 hospitals)" if demo_mode_enabled else "Demo mode disabled - showing live Azure data"
+    }
+
 # Stats endpoint
 @app.get("/api/stats")
 async def get_stats():
     global azure_stats_cache
+    
+    # If demo mode is enabled, return demo data
+    if demo_mode_enabled and DEMO_SERVICE_AVAILABLE:
+        cost_summary = demo_data_service.get_cost_summary()
+        coverage = demo_data_service.get_coverage_summary()
+        return {
+            "monthly_spend": cost_summary["monthly_cost"],
+            "ai_savings": cost_summary["monthly_savings"],
+            "hidden_costs_found": 24500,
+            "hidden_costs_mitigated": 18200,
+            "ri_coverage": coverage["ri_coverage_percent"],
+            "sp_coverage": coverage["sp_coverage_percent"],
+            "target_coverage": coverage["target_coverage_percent"],
+            "ri_savings_potential": coverage["potential_additional_savings"],
+            "budget_variance": 3.2,
+            "forecast_accuracy": 97.2,
+            "trust_score": 94,
+            "agents_active": 9,
+            "anomalies_today": 2,
+            "todays_savings": 3280,
+            "ytd_acr": cost_summary["monthly_cost"] * 12,
+            "macc_goal": cost_summary["monthly_cost"] * 12 * 1.15,
+            "macc_progress": 72.5,
+            "optimization_opportunity": cost_summary["monthly_savings"],
+            "yoy_growth": 18,
+            "gpu_growth_mom": 45.2,
+            "q2_conversion": 68,
+            "data_source": "demo",
+            "demo_scenario": "ContosoHealth (89 hospitals)",
+            "last_updated": datetime.utcnow().isoformat()
+        }
     
     # If Azure is configured, fetch real data from Azure Cost Management
     if is_azure_configured() and cost_service:
@@ -985,6 +1059,36 @@ async def simulate_tick():
 # Alerts
 @app.get("/api/alerts")
 async def get_alerts():
+    # Return demo anomalies if demo mode is enabled
+    if demo_mode_enabled and DEMO_SERVICE_AVAILABLE:
+        demo_anomalies = demo_data_service.get_anomalies()
+        alerts = []
+        # Convert active anomalies to alert format
+        for anom in demo_anomalies.get("active", []):
+            alerts.append({
+                "id": anom["id"],
+                "type": "anomaly",
+                "severity": anom["severity"],
+                "resource": anom["resource_name"],
+                "message": anom["probable_cause"],
+                "delta": f"+${anom['excess_cost']}/day",
+                "status": "investigating",
+                "timestamp": anom["detected_at"]
+            })
+        # Convert resolved anomalies to alert format
+        for anom in demo_anomalies.get("resolved_this_month", []):
+            alerts.append({
+                "id": anom["id"],
+                "type": "anomaly",
+                "severity": "medium",
+                "resource": anom["resource_name"],
+                "message": anom["cause"],
+                "delta": f"+${anom['excess_cost']}",
+                "status": "auto-resolved",
+                "timestamp": anom["resolved_at"]
+            })
+        return alerts
+    
     async with aiosqlite.connect(DATABASE) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute("SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 20")
@@ -1042,6 +1146,10 @@ async def get_hidden_costs():
 # Budgets
 @app.get("/api/budgets")
 async def get_budgets():
+    # If demo mode is enabled, return demo budgets
+    if demo_mode_enabled and DEMO_SERVICE_AVAILABLE:
+        return demo_data_service.get_budgets()
+    
     async with aiosqlite.connect(DATABASE) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute("SELECT * FROM budgets")
@@ -1088,6 +1196,10 @@ async def get_mission_critical():
 # AI Agents - diversified with primary and validator agents
 @app.get("/api/agents")
 async def get_agents():
+    # Return demo agent data if demo mode is enabled
+    if demo_mode_enabled and DEMO_SERVICE_AVAILABLE:
+        return demo_data_service.get_agent_performance()
+    
     # When Azure is configured, return agents with neutral descriptions (no fake dollar amounts)
     # The agents are the AI components that analyze Azure data
     
@@ -2268,6 +2380,19 @@ async def update_discount_settings(settings: dict):
 @app.get("/api/risp-actions")
 async def get_risp_actions():
     """Get RI/SP action summary for Executive Summary."""
+    # Return demo data if demo mode is enabled
+    if demo_mode_enabled and DEMO_SERVICE_AVAILABLE:
+        demo_risp = demo_data_service.get_risp_actions()
+        return {
+            "approved_count": demo_risp["summary"]["approved"],
+            "held_count": demo_risp["summary"]["on_hold"],
+            "blocked_count": demo_risp["summary"]["blocked"],
+            "approved": demo_risp["recent_actions"][:3],
+            "held": [a for a in demo_risp["recent_actions"] if a["action"] == "hold"][:2],
+            "blocked": [],
+            "total_approved_savings": demo_risp["savings"]["approved_monthly"],
+        }
+    
     return {
         "approved_count": len(risp_actions["approved"]),
         "held_count": len(risp_actions["held"]),
@@ -3137,6 +3262,10 @@ except ImportError as e:
 @app.get("/api/recommendations/smart")
 async def get_smart_recommendations():
     """Get recommendations enriched with workload intelligence."""
+    # If demo mode is enabled, return demo recommendations
+    if demo_mode_enabled and DEMO_SERVICE_AVAILABLE:
+        return demo_data_service.get_recommendations()
+    
     if not PHASE3_AVAILABLE:
         return {"error": "Phase 3 not available", "approved": [], "modified": [], "hold": [], "blocked": [], "summary": {}}
     return intelligence_service.get_smart_recommendations()
@@ -3163,6 +3292,10 @@ async def get_recommendation_details(rec_id: str):
 @app.get("/api/workloads")
 async def list_workloads():
     """List all registered workloads."""
+    # If demo mode is enabled, return demo workloads
+    if demo_mode_enabled and DEMO_SERVICE_AVAILABLE:
+        return {"workloads": demo_data_service.get_workloads()}
+    
     if not PHASE3_AVAILABLE:
         return {"workloads": []}
     
@@ -3419,6 +3552,11 @@ async def get_workload_resources(workload_id: int):
 @app.get("/api/evaluations")
 async def list_evaluations():
     """List all technology evaluations."""
+    # Return demo evaluations if demo mode is enabled
+    if demo_mode_enabled and DEMO_SERVICE_AVAILABLE:
+        demo_evals = demo_data_service.get_evaluations()
+        return {"evaluations": demo_evals}
+    
     if not PHASE3_AVAILABLE:
         return {"evaluations": []}
     
