@@ -1849,8 +1849,8 @@ function App() {
                                       <div className="space-y-2 max-h-48 overflow-y-auto">
                                         {rispActions.approved?.map((r: any, i: number) => (
                                           <div key={i} className="bg-green-900/30 rounded-lg p-2 text-sm">
-                                            <p className="text-white font-medium truncate">{r.resource || r.recommendation || 'Recommendation'}</p>
-                                            <p className="text-green-400 text-xs">{fmt(r.savings || 0)}/mo savings</p>
+                                            <p className="text-white font-medium truncate">{r.recommendation_name || r.resource || r.recommendation || 'Recommendation'}</p>
+                                            <p className="text-green-400 text-xs">{fmt(r.savings_monthly || r.savings || 0)}/mo savings</p>
                                           </div>
                                         ))}
                                         {(!rispActions.approved || rispActions.approved.length === 0) && (
@@ -1867,8 +1867,8 @@ function App() {
                                       <div className="space-y-2 max-h-48 overflow-y-auto">
                                         {rispActions.held?.map((r: any, i: number) => (
                                           <div key={i} className="bg-yellow-900/30 rounded-lg p-2 text-sm">
-                                            <p className="text-white font-medium truncate">{r.resource || r.recommendation || 'Recommendation'}</p>
-                                            <p className="text-yellow-400 text-xs">{fmt(r.savings || 0)}/mo savings</p>
+                                            <p className="text-white font-medium truncate">{r.recommendation_name || r.resource || r.recommendation || 'Recommendation'}</p>
+                                            <p className="text-yellow-400 text-xs">{fmt(r.savings_monthly || r.savings || 0)}/mo savings</p>
                                           </div>
                                         ))}
                                         {(!rispActions.held || rispActions.held.length === 0) && (
@@ -1885,8 +1885,8 @@ function App() {
                                       <div className="space-y-2 max-h-48 overflow-y-auto">
                                         {rispActions.blocked?.map((r: any, i: number) => (
                                           <div key={i} className="bg-red-900/30 rounded-lg p-2 text-sm">
-                                            <p className="text-white font-medium truncate">{r.resource || r.recommendation || 'Recommendation'}</p>
-                                            <p className="text-red-400 text-xs">{fmt(r.savings || 0)}/mo savings</p>
+                                            <p className="text-white font-medium truncate">{r.recommendation_name || r.resource || r.recommendation || 'Recommendation'}</p>
+                                            <p className="text-red-400 text-xs">{fmt(r.savings_monthly || r.savings || 0)}/mo savings</p>
                                           </div>
                                         ))}
                                         {(!rispActions.blocked || rispActions.blocked.length === 0) && (
