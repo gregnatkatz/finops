@@ -65,11 +65,11 @@ async def start_scheduler():
     # Clear existing jobs to avoid duplicates on restart
     sched.remove_all_jobs()
     
-    # Schedule jobs
+    # Schedule jobs - 10 minute intervals to reduce API chatter while keeping data fresh
     sched.add_job(
         refresh_daily_costs,
         'interval',
-        hours=1,
+        minutes=10,
         id='refresh_daily_costs',
         name='Refresh Daily Costs',
         next_run_time=datetime.utcnow()  # Run immediately on startup
@@ -78,7 +78,7 @@ async def start_scheduler():
     sched.add_job(
         refresh_recommendations,
         'interval',
-        hours=6,  # RI recommendations don't change frequently
+        minutes=30,  # RI recommendations don't change frequently
         id='refresh_recommendations',
         name='Refresh RI/SP Recommendations',
         next_run_time=datetime.utcnow()
@@ -87,7 +87,7 @@ async def start_scheduler():
     sched.add_job(
         refresh_budgets,
         'interval',
-        hours=1,
+        minutes=10,
         id='refresh_budgets',
         name='Refresh Azure Budgets',
         next_run_time=datetime.utcnow()
@@ -96,7 +96,7 @@ async def start_scheduler():
     sched.add_job(
         detect_anomalies,
         'interval',
-        hours=1,
+        minutes=10,
         id='detect_anomalies',
         name='Detect Cost Anomalies',
         next_run_time=datetime.utcnow()
