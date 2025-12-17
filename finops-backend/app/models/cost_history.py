@@ -149,3 +149,44 @@ class RICoverage(Base):
     
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class StatsSnapshot(Base):
+    """Cached stats snapshot for fast retrieval."""
+    __tablename__ = "stats_snapshot"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    snapshot_key = Column(String(50), nullable=False, unique=True, default="current")
+    
+    # Core stats
+    monthly_spend = Column(Float, default=0)
+    ai_savings = Column(Float, default=0)
+    anomalies_resolved = Column(Integer, default=0)
+    anomalies_total = Column(Integer, default=0)
+    budgets_on_track = Column(Integer, default=0)
+    budgets_total = Column(Integer, default=0)
+    ri_coverage_pct = Column(Float, default=0)
+    ri_target_pct = Column(Float, default=25)
+    agents_active = Column(Integer, default=0)
+    
+    # Full JSON payload for additional data
+    full_payload_json = Column(String(10000), nullable=True)
+    
+    # Metadata
+    last_updated = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AnomalySnapshot(Base):
+    """Cached anomaly data snapshot."""
+    __tablename__ = "anomaly_snapshot"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    snapshot_key = Column(String(50), nullable=False, unique=True, default="current")
+    
+    # JSON payload of anomaly data
+    payload_json = Column(String(50000), nullable=True)
+    
+    # Metadata
+    last_updated = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)

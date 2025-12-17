@@ -59,7 +59,9 @@ async def start_scheduler():
         refresh_daily_costs,
         refresh_recommendations,
         refresh_budgets,
-        detect_anomalies
+        detect_anomalies,
+        refresh_stats_snapshot,
+        refresh_anomaly_snapshot
     )
     
     # Clear existing jobs to avoid duplicates on restart
@@ -102,8 +104,28 @@ async def start_scheduler():
         next_run_time=datetime.utcnow()
     )
     
+    # Stats snapshot - runs every 5 minutes for fast retrieval
+    sched.add_job(
+        refresh_stats_snapshot,
+        'interval',
+        minutes=5,
+        id='refresh_stats_snapshot',
+        name='Refresh Stats Snapshot',
+        next_run_time=datetime.utcnow()
+    )
+    
+    # Anomaly snapshot - runs every 5 minutes
+    sched.add_job(
+        refresh_anomaly_snapshot,
+        'interval',
+        minutes=5,
+        id='refresh_anomaly_snapshot',
+        name='Refresh Anomaly Snapshot',
+        next_run_time=datetime.utcnow()
+    )
+    
     sched.start()
-    logger.info("Background scheduler started with 4 jobs")
+    logger.info("Background scheduler started with 6 jobs")
 
 
 async def stop_scheduler():

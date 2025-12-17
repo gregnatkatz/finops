@@ -103,6 +103,33 @@ function App() {
                                                                                             const [rispSubTab, setRispSubTab] = useState<'setup' | 'evaluations' | 'recommendations'>('setup')
                                                                                             const [discoveredResources, setDiscoveredResources] = useState<any[]>([])
                                                                                             const [resourceMappingWorkload, setResourceMappingWorkload] = useState<string>('')
+                                                                                            const [demoMode, setDemoMode] = useState(false)
+                                                                                            const [demoModeLoading, setDemoModeLoading] = useState(false)
+
+  const toggleDemoMode = async () => {
+    setDemoModeLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/demo/toggle`, { method: 'POST' })
+      const data = await res.json()
+      setDemoMode(data.demo_mode)
+      // Refresh all data after toggling demo mode
+      await fetchData()
+    } catch (e) {
+      console.error('Failed to toggle demo mode:', e)
+    } finally {
+      setDemoModeLoading(false)
+    }
+  }
+
+  const checkDemoStatus = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/demo/status`)
+      const data = await res.json()
+      setDemoMode(data.demo_mode)
+    } catch (e) {
+      console.error('Failed to check demo status:', e)
+    }
+  }
 
                             const fetchData = useCallback(async () => {
             try {
@@ -255,16 +282,17 @@ function App() {
     }
   }
 
-  useEffect(() => {
-    fetchData()
-    const d = setInterval(fetchData, 30000)
-    const t = setInterval(simulateTick, 3000)
-    const c = setInterval(() => setCurrentTime(new Date()), 1000)
-    // Disable demo alerts - they're distracting and not real data
-    // const a = setTimeout(generateDemoAlert, 5000)
-    // const alertInterval = setInterval(generateDemoAlert, 60000)
-    return () => { clearInterval(d); clearInterval(t); clearInterval(c) }
-  }, [fetchData, simulateTick])
+    useEffect(() => {
+      fetchData()
+      checkDemoStatus()
+      const d = setInterval(fetchData, 30000)
+      const t = setInterval(simulateTick, 3000)
+      const c = setInterval(() => setCurrentTime(new Date()), 1000)
+      // Disable demo alerts - they're distracting and not real data
+      // const a = setTimeout(generateDemoAlert, 5000)
+      // const alertInterval = setInterval(generateDemoAlert, 60000)
+      return () => { clearInterval(d); clearInterval(t); clearInterval(c) }
+    }, [fetchData, simulateTick])
 
   const openAlertWorkflow = (alert: any) => {
     setSelectedAlert(alert)
@@ -846,10 +874,22 @@ function App() {
                 <h1 className="text-xl font-bold text-white">FinOps AI Command Center</h1>
                 <p className="text-xs text-slate-400">ContosoHealth Azure Cost Intelligence</p>
               </div>
-              <button onClick={() => setIsLive(!isLive)} className={`ml-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${isLive ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-slate-700 text-slate-400'}`}>
-                <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
-                LIVE
-              </button>
+                            <button onClick={() => setIsLive(!isLive)} className={`ml-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${isLive ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-slate-700 text-slate-400'}`}>
+                              <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
+                              LIVE
+                            </button>
+                            <button 
+                              onClick={toggleDemoMode} 
+                              disabled={demoModeLoading}
+                              className={`ml-2 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${demoMode ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}
+                            >
+                              {demoModeLoading ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Database className="w-3 h-3" />
+                              )}
+                              {demoMode ? 'DEMO' : 'Demo Mode'}
+                            </button>
             </div>
             <div className="flex items-center gap-6">
               <div className="text-center"><p className="text-xs text-slate-400">Today's Savings</p><p className="text-lg font-bold text-green-400">${stats?.todays_savings?.toLocaleString() || '0'}</p></div>
@@ -866,20 +906,37 @@ function App() {
             ))}
           </div>
         </div>
-      </header>
+            </header>
 
-      <main className="p-6">
-        {activeTab === 'exec' && stats && (
+            {/* Demo Mode Banner */}
+            {demoMode && (
+              <div className="bg-purple-500/20 border-b border-purple-500/30 px-6 py-2">
+                <div className="flex items-center justify-center gap-2 text-purple-300 text-sm">
+                  <Database className="w-4 h-4" />
+                  <span className="font-medium">Demo Mode Active</span>
+                  <span className="text-purple-400">- Showing ContosoHealth sample data (89 hospitals, $824.2K/month spend, $100K savings opportunity)</span>
+                  <button 
+                    onClick={toggleDemoMode}
+                    className="ml-4 px-2 py-0.5 bg-purple-500/30 hover:bg-purple-500/40 rounded text-xs font-medium transition-colors"
+                  >
+                    Exit Demo
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <main className="p-6">
+        {activeTab === 'exec' && (
           <div className="space-y-6">
             {/* Key Metrics Row */}
             <div className="grid grid-cols-6 gap-4">
               {[
-                { label: 'MONTHLY AZURE COST', value: fmt(stats.monthly_spend), sub: `${fmt(stats.monthly_spend / 30)} daily rate`, icon: TrendingUp, color: 'blue' },
-                { label: 'MONTHLY SAVINGS', value: fmt(stats.ai_savings), change: stats.data_source === 'azure_live' ? 'Live Azure Data' : '+$127K vs last month', icon: DollarSign, color: 'green' },
+                { label: 'MONTHLY AZURE COST', value: fmt(stats?.monthly_spend || 0), sub: `${fmt((stats?.monthly_spend || 0) / 30)} daily rate`, icon: TrendingUp, color: 'blue' },
+                { label: 'MONTHLY SAVINGS', value: fmt(stats?.ai_savings || 0), change: stats?.data_source === 'azure_live' ? 'Live Azure Data' : '+$127K vs last month', icon: DollarSign, color: 'green' },
                                 { label: 'ANOMALIES RESOLVED', value: stats?.data_source === 'azure_live' ? 'N/A' : `${alerts.filter((a: any) => a.status === 'auto-resolved' || a.status === 'owner-notified').length}/${alerts.length}`, sub: stats?.data_source === 'azure_live' ? 'No anomaly data' : 'This month', icon: CheckCircle, color: 'blue' },
                                 { label: 'BUDGET STATUS', value: stats?.data_source === 'azure_live' ? 'N/A' : 'ON TRACK', sub: stats?.data_source === 'azure_live' ? 'No budget data' : `${budgets.filter((b: any) => b.threshold_status === 'healthy' || b.threshold_status === 'info').length}/${budgets.length} budgets on track`, icon: Shield, color: 'green' },
-                { label: 'RI COVERAGE', value: `${stats.ri_coverage}%`, sub: `Target: ${stats.target_coverage}%`, icon: Target, color: stats.ri_coverage >= stats.target_coverage ? 'green' : 'yellow' },
-                { label: 'AGENT SAVINGS', value: stats?.data_source === 'azure_live' ? fmt(stats.ai_savings || 0) : fmt(agents.reduce((sum: number, a: any) => sum + (a.savings_identified || 0), 0)), sub: stats?.data_source === 'azure_live' ? 'From Azure recommendations' : `${agents.length} agents active`, icon: Bot, color: 'purple' },
+                { label: 'RI COVERAGE', value: `${stats?.ri_coverage || 0}%`, sub: `Target: ${stats?.target_coverage || 25}%`, icon: Target, color: (stats?.ri_coverage || 0) >= (stats?.target_coverage || 25) ? 'green' : 'yellow' },
+                { label: 'AGENT SAVINGS', value: stats?.data_source === 'azure_live' ? fmt(stats?.ai_savings || 0) : fmt(agents.reduce((sum: number, a: any) => sum + (a.savings_identified || 0), 0)), sub: stats?.data_source === 'azure_live' ? 'From Azure recommendations' : `${agents.length} agents active`, icon: Bot, color: 'purple' },
               ].map((s, i) => (
                 <div key={i} className={`rounded-xl border p-5 bg-slate-900 border-slate-800`}>
                   <div className="flex items-center justify-between mb-2">
@@ -902,23 +959,42 @@ function App() {
                   <Activity className="w-5 h-5 text-orange-400" />
                   <h3 className="font-semibold text-white">Anomaly Resolution Timeline</h3>
                 </div>
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {alerts.slice(0, 8).map((alert: any, i: number) => (
-                    <div key={i} className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg">
-                      <div className={`w-2 h-2 rounded-full mt-2 ${alert.status === 'auto-resolved' ? 'bg-green-400' : alert.status === 'owner-notified' ? 'bg-blue-400' : alert.status === 'investigating' ? 'bg-yellow-400' : alert.status === 'dismissed' ? 'bg-slate-400' : 'bg-red-400'}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white truncate">{alert.resource}</p>
-                        <p className="text-xs text-slate-400">{alert.message}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`px-2 py-0.5 rounded text-xs ${alert.status === 'auto-resolved' ? 'bg-green-500/20 text-green-400' : alert.status === 'owner-notified' ? 'bg-blue-500/20 text-blue-400' : alert.status === 'investigating' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-500/20 text-slate-400'}`}>
-                            {alert.status === 'auto-resolved' ? 'Resolved' : alert.status === 'owner-notified' ? 'Owner Notified' : alert.status === 'investigating' ? 'Investigating' : alert.status === 'dismissed' ? 'Dismissed' : 'Pending'}
-                          </span>
-                          <span className="text-xs text-slate-500">{alert.delta}</span>
+                {alerts.length > 0 ? (
+                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {alerts.slice(0, 8).map((alert: any, i: number) => (
+                      <div key={i} className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg">
+                        <div className={`w-2 h-2 rounded-full mt-2 ${alert.status === 'auto-resolved' ? 'bg-green-400' : alert.status === 'owner-notified' ? 'bg-blue-400' : alert.status === 'investigating' ? 'bg-yellow-400' : alert.status === 'dismissed' ? 'bg-slate-400' : 'bg-red-400'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white truncate">{alert.resource}</p>
+                          <p className="text-xs text-slate-400">{alert.message}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`px-2 py-0.5 rounded text-xs ${alert.status === 'auto-resolved' ? 'bg-green-500/20 text-green-400' : alert.status === 'owner-notified' ? 'bg-blue-500/20 text-blue-400' : alert.status === 'investigating' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-500/20 text-slate-400'}`}>
+                              {alert.status === 'auto-resolved' ? 'Resolved' : alert.status === 'owner-notified' ? 'Owner Notified' : alert.status === 'investigating' ? 'Investigating' : alert.status === 'dismissed' ? 'Dismissed' : 'Pending'}
+                            </span>
+                            <span className="text-xs text-slate-500">{alert.delta}</span>
+                          </div>
                         </div>
                       </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="border border-dashed border-slate-700 rounded-xl p-8 flex items-center justify-center min-h-[200px]">
+                    <div className="text-center max-w-[280px]">
+                      <div className="w-12 h-12 rounded-xl bg-green-500/15 flex items-center justify-center mx-auto mb-4">
+                        <Zap className="w-6 h-6 text-green-500" />
+                      </div>
+                      <h4 className="text-base font-semibold text-white mb-2">No Anomalies Detected</h4>
+                      <p className="text-sm text-slate-400 mb-5">Cost anomaly detection activates after 7 days of usage data.</p>
+                      <svg viewBox="0 0 200 50" className="w-full h-[50px] mb-4 opacity-50">
+                        <path d="M0,40 Q30,35 60,30 T120,25 T180,20 L200,18" fill="none" stroke="#10b981" strokeWidth="2" strokeDasharray="4,4" />
+                        <circle cx="180" cy="20" r="4" fill="#10b981" opacity="0.5" />
+                      </svg>
+                      <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-500/10 rounded-full text-xs text-green-500">
+                        <Clock className="w-3 h-3" /> Monitoring active
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Budget Guardrails Status */}
@@ -927,27 +1003,56 @@ function App() {
                   <Shield className="w-5 h-5 text-blue-400" />
                   <h3 className="font-semibold text-white">Budget Guardrails</h3>
                 </div>
-                <div className="space-y-3">
-                  {budgets.map((budget: any, i: number) => (
-                    <div key={i} className="p-3 bg-slate-800/50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-white">{budget.name}</span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${budget.threshold_status === 'critical' ? 'bg-red-500/20 text-red-400' : budget.threshold_status === 'warning' ? 'bg-yellow-500/20 text-yellow-400' : budget.threshold_status === 'info' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
-                          {budget.percentage}%
-                        </span>
+                {budgets.length > 0 ? (
+                  <div className="space-y-3">
+                    {budgets.map((budget: any, i: number) => (
+                      <div key={i} className="p-3 bg-slate-800/50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-white">{budget.name}</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${budget.threshold_status === 'critical' ? 'bg-red-500/20 text-red-400' : budget.threshold_status === 'warning' ? 'bg-yellow-500/20 text-yellow-400' : budget.threshold_status === 'info' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
+                            {budget.percentage}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-700 rounded-full h-2">
+                          <div className={`h-2 rounded-full ${budget.threshold_status === 'critical' ? 'bg-red-500' : budget.threshold_status === 'warning' ? 'bg-yellow-500' : budget.threshold_status === 'info' ? 'bg-blue-500' : 'bg-green-500'}`} style={{ width: `${Math.min(budget.percentage, 100)}%` }} />
+                        </div>
+                        <div className="flex justify-between mt-1">
+                          <span className="text-xs text-slate-500">{fmt(budget.spent)} / {fmt(budget.budget)}</span>
+                          <span className={`text-xs ${budget.threshold_status === 'critical' ? 'text-red-400' : budget.threshold_status === 'warning' ? 'text-yellow-400' : 'text-slate-500'}`}>
+                            {budget.threshold_status === 'critical' ? '⚠️ Over 90%' : budget.threshold_status === 'warning' ? '⚠️ Over 80%' : budget.threshold_status === 'info' ? 'ℹ️ Over 60%' : '✓ On track'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="w-full bg-slate-700 rounded-full h-2">
-                        <div className={`h-2 rounded-full ${budget.threshold_status === 'critical' ? 'bg-red-500' : budget.threshold_status === 'warning' ? 'bg-yellow-500' : budget.threshold_status === 'info' ? 'bg-blue-500' : 'bg-green-500'}`} style={{ width: `${Math.min(budget.percentage, 100)}%` }} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="border border-dashed border-slate-700 rounded-xl p-8 flex items-center justify-center min-h-[200px]">
+                    <div className="text-center max-w-[280px]">
+                      <div className="w-12 h-12 rounded-xl bg-purple-500/15 flex items-center justify-center mx-auto mb-4">
+                        <Target className="w-6 h-6 text-purple-500" />
                       </div>
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs text-slate-500">{fmt(budget.spent)} / {fmt(budget.budget)}</span>
-                        <span className={`text-xs ${budget.threshold_status === 'critical' ? 'text-red-400' : budget.threshold_status === 'warning' ? 'text-yellow-400' : 'text-slate-500'}`}>
-                          {budget.threshold_status === 'critical' ? '⚠️ Over 90%' : budget.threshold_status === 'warning' ? '⚠️ Over 80%' : budget.threshold_status === 'info' ? 'ℹ️ Over 60%' : '✓ On track'}
-                        </span>
+                      <h4 className="text-base font-semibold text-white mb-2">No Budgets Configured</h4>
+                      <p className="text-sm text-slate-400 mb-5">Set up Azure budgets to track spending against targets.</p>
+                      <div className="mb-5 opacity-50">
+                        {[65, 40, 85].map((width, i) => (
+                          <div key={i} className="flex items-center gap-3 mb-2.5">
+                            <span className="text-xs text-slate-500 w-[60px] text-left">Budget {i + 1}</span>
+                            <div className="flex-1 h-2 bg-slate-700/50 rounded overflow-hidden">
+                              <div className="h-full rounded bg-gradient-to-r from-purple-500 to-purple-400" style={{ width: `${width}%` }} />
+                            </div>
+                            <span className="text-xs text-slate-500 w-[30px]">--%</span>
+                          </div>
+                        ))}
                       </div>
+                      <button 
+                        onClick={() => window.open('https://portal.azure.com/#view/Microsoft_Azure_CostManagement/Menu/~/budgets', '_blank')}
+                        className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-purple-500/15 border border-purple-500/30 rounded-lg text-purple-400 text-sm font-medium hover:bg-purple-500/25 transition-colors"
+                      >
+                        + Create Budget in Azure
+                      </button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* AI Agent Performance */}
@@ -960,20 +1065,22 @@ function App() {
                   {agents.filter((a: any) => a.role === 'primary').slice(0, 5).map((agent: any, i: number) => (
                     <div key={i} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${agent.color}20` }}>
-                          <Brain className="w-4 h-4" style={{ color: agent.color }} />
-                        </div>
+                        <div className="w-2 h-2 rounded-full bg-green-500" style={{ boxShadow: '0 0 8px rgba(16, 185, 129, 0.5)' }} />
                         <div>
                           <p className="text-sm text-white">{agent.name}</p>
-                          <p className="text-xs text-slate-400">{agent.actions_today} actions today</p>
+                          <p className="text-xs text-green-500">{agent.actions_today > 0 ? `${agent.actions_today} actions today` : 'Ready - Monitoring'}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium text-green-400">{fmt(agent.savings_identified)}</p>
+                        <p className="text-sm font-medium text-green-400">{agent.savings_identified > 0 ? fmt(agent.savings_identified) : ''}</p>
                         <p className="text-xs text-slate-500">{agent.accuracy}% accuracy</p>
                       </div>
                     </div>
                   ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-800 flex items-center gap-2 text-xs text-green-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  All agents active and monitoring
                 </div>
               </div>
             </div>
@@ -1071,7 +1178,7 @@ function App() {
                       ))}
                     </select>
                   </div>
-                  {azureStatus.configured && (
+                  {azureStatus?.configured && (
                     <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-2">
                       <CheckCircle className="w-3 h-3" /> Connected to Azure
                     </span>
