@@ -7,7 +7,7 @@ from sqlalchemy import (
     Column, Integer, String, Float, Date, DateTime, 
     Boolean, ForeignKey, Text, Enum, JSON
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from app.models.cost_history import Base
 import enum
 
@@ -82,12 +82,70 @@ class Workload(Base):
     
     # Demo data flag - separates seed data from user-created data
     is_demo = Column(Boolean, default=False, index=True)
-    demo_scenario = Column(String(100), nullable=True)  # e.g., "adventhealth", "contoso"
+    demo_scenario = Column(String(100), nullable=True)  # e.g., "contosohealth"
     
     # Relationships
     evaluations = relationship("TechnologyEvaluation", back_populates="workload")
     context_notes = relationship("WorkloadContext", back_populates="workload")
     documents = relationship("WorkloadDocument", back_populates="workload")
+    
+    @property
+    def resource_count(self):
+        """Return count of mapped resources."""
+        return len(self.resource_mappings) if hasattr(self, 'resource_mappings') and self.resource_mappings else 0
+
+    @property  
+    def total_monthly_cost(self):
+        """Return total monthly cost of all mapped resources."""
+        if not hasattr(self, 'resource_mappings') or not self.resource_mappings:
+            return 0
+        return sum(m.estimated_monthly_cost or 0 for m in self.resource_mappings)
+
+
+class WorkloadResourceMapping(Base):
+    """
+    Direct mapping of Azure resources to workloads.
+    
+    This is the most reliable way to associate Azure resources with business
+    workloads. While pattern matching (resource_group_patterns, subscription_ids)
+    works for bulk assignments, direct mapping gives precise control.
+    
+    Use cases:
+    - Admin explicitly assigns resources via UI
+    - Auto-discovery populates mappings from Azure tags
+    - Import from CMDB or ServiceNow
+    """
+    __tablename__ = "workload_resource_mappings"
+    
+    id = Column(Integer, primary_key=True)
+    workload_id = Column(Integer, ForeignKey('workloads.id'), nullable=False)
+    
+    # Azure resource identifiers - any of these can be used for matching
+    resource_id = Column(String(500), index=True)      # Full ARM resource ID
+    resource_name = Column(String(255), index=True)    # Just the resource name
+    resource_type = Column(String(255))                # e.g., Microsoft.Sql/servers
+    resource_group = Column(String(255), index=True)   # Resource group name
+    subscription_id = Column(String(100))              # Subscription GUID
+    
+    # Cost info for prioritization and reporting
+    estimated_monthly_cost = Column(Float, default=0)
+    
+    # Metadata
+    mapped_by = Column(String(255))                    # Who created this mapping
+    mapped_at = Column(DateTime, default=datetime.utcnow)
+    mapping_source = Column(String(50))                # manual, auto_discovered, tag_sync, cmdb_import
+    
+    # Optional notes
+    notes = Column(Text)
+    
+    # Relationship back to workload
+    workload = relationship(
+        "Workload", 
+        backref=backref("resource_mappings", cascade="all, delete-orphan")
+    )
+    
+    def __repr__(self):
+        return f"<WorkloadResourceMapping {self.resource_name} -> Workload {self.workload_id}>"
 
 
 class WorkloadContext(Base):

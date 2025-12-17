@@ -679,12 +679,12 @@ def seed_phase3_demo_data():
         
         # Create demo workloads
         workloads_data = [
-            {"name": "Patient Front Door", "description": "Patient scheduling, check-in, and call center application running on SQL Server and Windows VMs", "owner_name": "Jennifer Martinez", "owner_email": "jennifer.martinez@adventhealth.org", "status": "evaluating", "criticality": "mission_critical"},
-            {"name": "PACS Imaging", "description": "Picture Archiving and Communication System for radiology imaging storage and retrieval", "owner_name": "Dr. Sarah Chen", "owner_email": "sarah.chen@adventhealth.org", "status": "active", "criticality": "mission_critical"},
-            {"name": "Epic Integration", "description": "Epic EHR integration layer running on RHEL VMs", "owner_name": "Mike Johnson", "owner_email": "mike.johnson@adventhealth.org", "status": "active", "criticality": "mission_critical"},
-            {"name": "Data Analytics Platform", "description": "Azure Synapse-based analytics for population health insights", "owner_name": "Lisa Park", "owner_email": "lisa.park@adventhealth.org", "status": "evaluating", "criticality": "high"},
-            {"name": "ASR Disaster Recovery", "description": "Azure Site Recovery for business continuity", "owner_name": "Tom Williams", "owner_email": "tom.williams@adventhealth.org", "status": "active", "criticality": "high"},
-            {"name": "ML Training Pipeline", "description": "GPU-based machine learning for diagnostic imaging AI", "owner_name": "Dr. James Lee", "owner_email": "james.lee@adventhealth.org", "status": "active", "criticality": "standard"},
+            {"name": "Patient Front Door", "description": "Patient scheduling, check-in, and call center application running on SQL Server and Windows VMs", "owner_name": "Jennifer Martinez", "owner_email": "jennifer.martinez@contosohealth.org", "status": "evaluating", "criticality": "mission_critical"},
+            {"name": "PACS Imaging", "description": "Picture Archiving and Communication System for radiology imaging storage and retrieval", "owner_name": "Dr. Sarah Chen", "owner_email": "sarah.chen@contosohealth.org", "status": "active", "criticality": "mission_critical"},
+            {"name": "Epic Integration", "description": "Epic EHR integration layer running on RHEL VMs", "owner_name": "Mike Johnson", "owner_email": "mike.johnson@contosohealth.org", "status": "active", "criticality": "mission_critical"},
+            {"name": "Data Analytics Platform", "description": "Azure Synapse-based analytics for population health insights", "owner_name": "Lisa Park", "owner_email": "lisa.park@contosohealth.org", "status": "evaluating", "criticality": "high"},
+            {"name": "ASR Disaster Recovery", "description": "Azure Site Recovery for business continuity", "owner_name": "Tom Williams", "owner_email": "tom.williams@contosohealth.org", "status": "active", "criticality": "high"},
+            {"name": "ML Training Pipeline", "description": "GPU-based machine learning for diagnostic imaging AI", "owner_name": "Dr. James Lee", "owner_email": "james.lee@contosohealth.org", "status": "active", "criticality": "standard"},
         ]
         
         created_workloads = []
@@ -697,7 +697,7 @@ def seed_phase3_demo_data():
                 status=WorkloadStatus(wl_data["status"]),
                 criticality=wl_data["criticality"],
                 is_demo=True,  # Mark as demo data for persistence
-                demo_scenario="adventhealth"
+                demo_scenario="contosohealth"
             )
             db.add(wl)
             db.flush()
@@ -727,7 +727,7 @@ def seed_phase3_demo_data():
                 affected_azure_services=eval_data["affected_azure_services"],
                 executive_sponsor=eval_data.get("executive_sponsor"),
                 is_demo=True,  # Mark as demo data for persistence
-                demo_scenario="adventhealth"
+                demo_scenario="contosohealth"
             )
             db.add(ev)
         
@@ -1088,8 +1088,137 @@ async def get_mission_critical():
 # AI Agents - diversified with primary and validator agents
 @app.get("/api/agents")
 async def get_agents():
-    # Agents should always be shown - they analyze Azure data when connected
-    # The agents are the AI components, not Azure resources
+    # When Azure is configured, return agents with neutral descriptions (no fake dollar amounts)
+    # The agents are the AI components that analyze Azure data
+    
+    if is_azure_configured():
+        # Return agents with neutral descriptions - no hardcoded demo values
+        agents = [
+            # Primary Agents
+            {
+                "id": "sentinel",
+                "name": "Cost Sentinel",
+                "type": "Real-Time Guardian",
+                "role": "primary",
+                "azure_service": "Azure Monitor + Logic Apps",
+                "status": "active",
+                "accuracy": 97.3,
+                "last_action": "Monitoring for cost anomalies",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#ef4444",
+            },
+            {
+                "id": "commitment",
+                "name": "Commitment Advisor",
+                "type": "RI/SP Optimizer",
+                "role": "primary",
+                "azure_service": "Cost Management + Advisor",
+                "status": "active",
+                "accuracy": 94.8,
+                "last_action": "Analyzing RI/SP opportunities",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#8b5cf6",
+            },
+            {
+                "id": "orphan",
+                "name": "Orphan Hunter",
+                "type": "Waste Eliminator",
+                "role": "primary",
+                "azure_service": "Azure Advisor + Resource Graph",
+                "status": "active",
+                "accuracy": 99.1,
+                "last_action": "Scanning for unused resources",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#f59e0b",
+            },
+            {
+                "id": "rightsize",
+                "name": "Right-Size Engine",
+                "type": "Compute Optimizer",
+                "role": "primary",
+                "azure_service": "Azure Advisor + ML",
+                "status": "active",
+                "accuracy": 96.5,
+                "last_action": "Evaluating VM utilization",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#10b981",
+            },
+            # Validator/Secondary Agents
+            {
+                "id": "validator-cost",
+                "name": "Cost Validator",
+                "type": "Accuracy Checker",
+                "role": "validator",
+                "azure_service": "Azure AI Foundry",
+                "status": "active",
+                "accuracy": 98.2,
+                "last_action": "Validating cost analysis",
+                "actions_today": 0,
+                "validates": "sentinel",
+                "color": "#06b6d4",
+            },
+            {
+                "id": "validator-recommendation",
+                "name": "Recommendation Validator",
+                "type": "Decision Auditor",
+                "role": "validator",
+                "azure_service": "Azure ML + Cost API",
+                "status": "active",
+                "accuracy": 97.8,
+                "last_action": "Auditing recommendations",
+                "actions_today": 0,
+                "validates": "commitment",
+                "color": "#ec4899",
+            },
+            {
+                "id": "forecast",
+                "name": "Spend Prophet",
+                "type": "Predictive Forecaster",
+                "role": "primary",
+                "azure_service": "Azure ML + FOCUS",
+                "status": "active",
+                "accuracy": 91.2,
+                "last_action": "Generating cost forecast",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#3b82f6",
+            },
+            {
+                "id": "storage",
+                "name": "Storage Optimizer",
+                "type": "Tiering Agent",
+                "role": "primary",
+                "azure_service": "Storage Analytics + Lifecycle",
+                "status": "active",
+                "accuracy": 96.5,
+                "last_action": "Analyzing storage tiers",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#14b8a6",
+            },
+            {
+                "id": "gpt5",
+                "name": "GPT-5",
+                "type": "Advanced Reasoning",
+                "role": "primary",
+                "azure_service": "Azure OpenAI Service",
+                "status": "active",
+                "accuracy": 98.7,
+                "last_action": "Analyzing cost patterns",
+                "actions_today": 0,
+                "savings_identified": 0,
+                "color": "#d946ef",
+                "model": "gpt-5",
+                "endpoint": "https://pharma-agents-jnj-resource.cognitiveservices.azure.com",
+            },
+        ]
+        return agents
+    
+    # Demo mode - return agents with example data
     agents = [
         # Primary Agents
         {
@@ -3038,7 +3167,11 @@ async def list_workloads():
         return {"workloads": []}
     
     with get_db() as db:
-        workloads = db.query(Workload).all()
+        # Filter out demo data when Azure is configured
+        if is_azure_configured():
+            workloads = db.query(Workload).filter(Workload.is_demo != True).all()
+        else:
+            workloads = db.query(Workload).all()
         return {
             "workloads": [
                 {
@@ -3136,6 +3269,151 @@ async def get_workload(workload_id: int):
         }
 
 
+# ============ RESOURCE DISCOVERY & MAPPING ============
+
+@app.get("/api/resources/discovered")
+async def get_discovered_resources():
+    """Get all Azure resources with their mapping status."""
+    if not PHASE3_AVAILABLE:
+        return {"resources": [], "total": 0, "mapped": 0, "unmapped": 0}
+    
+    try:
+        azure = get_azure_manager()
+        resources = azure.list_resources()
+    except Exception as e:
+        return {"resources": [], "total": 0, "mapped": 0, "unmapped": 0, "error": str(e)}
+    
+    from app.models.workload_intelligence import WorkloadResourceMapping
+    
+    with get_db() as db:
+        mappings = {m.resource_name: {"workload_id": m.workload_id, "mapping_id": m.id}
+                   for m in db.query(WorkloadResourceMapping).all()}
+        workloads = {w.id: w.name for w in db.query(Workload).all()}
+    
+    result = []
+    for category, data in resources.get("categories", {}).items():
+        for resource in data.get("resources", []):
+            mapping = mappings.get(resource.get("name"))
+            result.append({
+                "name": resource.get("name"),
+                "type": resource.get("type"),
+                "location": resource.get("location"),
+                "resource_group": resource.get("resource_group"),
+                "category": category,
+                "is_mapped": mapping is not None,
+                "workload_id": mapping["workload_id"] if mapping else None,
+                "workload_name": workloads.get(mapping["workload_id"]) if mapping else None,
+                "mapping_id": mapping["mapping_id"] if mapping else None
+            })
+    
+    return {
+        "resources": result,
+        "total": len(result),
+        "mapped": sum(1 for r in result if r["is_mapped"]),
+        "unmapped": sum(1 for r in result if not r["is_mapped"])
+    }
+
+
+@app.post("/api/resources/map")
+async def map_resource_to_workload(
+    workload_id: int = Form(...),
+    resource_name: str = Form(...),
+    resource_id: str = Form(None),
+    resource_type: str = Form(None),
+    resource_group: str = Form(None),
+    estimated_monthly_cost: float = Form(0),
+    mapped_by: str = Form("admin")
+):
+    """Map an Azure resource to a workload."""
+    if not PHASE3_AVAILABLE:
+        raise HTTPException(503, "Phase 3 not available")
+    
+    from app.models.workload_intelligence import WorkloadResourceMapping
+    
+    with get_db() as db:
+        workload = db.query(Workload).filter(Workload.id == workload_id).first()
+        if not workload:
+            raise HTTPException(404, "Workload not found")
+        
+        existing = db.query(WorkloadResourceMapping).filter(
+            WorkloadResourceMapping.resource_name == resource_name
+        ).first()
+        
+        if existing:
+            existing.workload_id = workload_id
+            existing.mapped_by = mapped_by
+            existing.mapped_at = datetime.utcnow()
+            db.commit()
+            return {"status": "updated", "id": existing.id}
+        
+        new_mapping = WorkloadResourceMapping(
+            workload_id=workload_id,
+            resource_name=resource_name,
+            resource_id=resource_id,
+            resource_type=resource_type,
+            resource_group=resource_group,
+            estimated_monthly_cost=estimated_monthly_cost,
+            mapped_by=mapped_by,
+            mapping_source="manual"
+        )
+        db.add(new_mapping)
+        db.commit()
+        return {"status": "created", "id": new_mapping.id}
+
+
+@app.delete("/api/resources/map/{mapping_id}")
+async def unmap_resource(mapping_id: int):
+    """Remove a resource mapping."""
+    if not PHASE3_AVAILABLE:
+        raise HTTPException(503, "Phase 3 not available")
+    
+    from app.models.workload_intelligence import WorkloadResourceMapping
+    
+    with get_db() as db:
+        mapping = db.query(WorkloadResourceMapping).filter(WorkloadResourceMapping.id == mapping_id).first()
+        if not mapping:
+            raise HTTPException(404, "Mapping not found")
+        db.delete(mapping)
+        db.commit()
+        return {"status": "unmapped"}
+
+
+@app.get("/api/workloads/{workload_id}/resources")
+async def get_workload_resources(workload_id: int):
+    """Get all resources mapped to a specific workload."""
+    if not PHASE3_AVAILABLE:
+        raise HTTPException(503, "Phase 3 not available")
+    
+    from app.models.workload_intelligence import WorkloadResourceMapping
+    
+    with get_db() as db:
+        workload = db.query(Workload).filter(Workload.id == workload_id).first()
+        if not workload:
+            raise HTTPException(404, "Workload not found")
+        
+        mappings = db.query(WorkloadResourceMapping).filter(
+            WorkloadResourceMapping.workload_id == workload_id
+        ).all()
+        
+        return {
+            "workload_id": workload_id,
+            "workload_name": workload.name,
+            "resource_count": len(mappings),
+            "total_monthly_cost": sum(m.estimated_monthly_cost or 0 for m in mappings),
+            "resources": [
+                {
+                    "id": m.id,
+                    "resource_name": m.resource_name,
+                    "resource_type": m.resource_type,
+                    "resource_group": m.resource_group,
+                    "estimated_monthly_cost": m.estimated_monthly_cost,
+                    "mapped_at": m.mapped_at.isoformat() if m.mapped_at else None
+                }
+                for m in mappings
+            ]
+        }
+
+
 # ============ TECHNOLOGY EVALUATIONS ============
 
 @app.get("/api/evaluations")
@@ -3145,7 +3423,11 @@ async def list_evaluations():
         return {"evaluations": []}
     
     with get_db() as db:
-        evaluations = db.query(TechnologyEvaluation).all()
+        # Filter out demo data when Azure is configured
+        if is_azure_configured():
+            evaluations = db.query(TechnologyEvaluation).filter(TechnologyEvaluation.is_demo != True).all()
+        else:
+            evaluations = db.query(TechnologyEvaluation).all()
         return {
             "evaluations": [
                 {
