@@ -98,8 +98,11 @@ function App() {
                                   sp_1year_discount: 33,
                                   sp_3year_discount: 52
                                 })
-                                              const [rispActions, setRispActions] = useState<any>({ approved_count: 0, held_count: 0, blocked_count: 0, total_approved_savings: 0 })
-                                              const [uploadedDocs, setUploadedDocs] = useState<{name: string, size: number, url: string}[]>([])
+                                                                                            const [rispActions, setRispActions] = useState<any>({ approved_count: 0, held_count: 0, blocked_count: 0, total_approved_savings: 0 })
+                                                                                            const [uploadedDocs, setUploadedDocs] = useState<{name: string, size: number, url: string}[]>([])
+                                                                                            const [rispSubTab, setRispSubTab] = useState<'setup' | 'evaluations' | 'recommendations'>('setup')
+                                                                                            const [discoveredResources, setDiscoveredResources] = useState<any[]>([])
+                                                                                            const [resourceMappingWorkload, setResourceMappingWorkload] = useState<string>('')
 
                             const fetchData = useCallback(async () => {
             try {
@@ -592,17 +595,60 @@ function App() {
     }
   }
 
-  const deleteEvaluation = async (id: string) => {
-    try {
-      await fetch(`${API_URL}/api/evaluations/${id}`, { method: 'DELETE' })
-      toast.success('Evaluation deleted')
-      fetchData()
-    } catch (e) {
-      toast.error('Failed to delete evaluation')
+    const deleteEvaluation = async (id: string) => {
+      try {
+        await fetch(`${API_URL}/api/evaluations/${id}`, { method: 'DELETE' })
+        toast.success('Evaluation deleted')
+        fetchData()
+      } catch (e) {
+        toast.error('Failed to delete evaluation')
+      }
     }
-  }
 
-  const openRecommendationDrawer = async (rec: any) => {
+    const fetchDiscoveredResources = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/resources/discovered`)
+        const data = await res.json()
+        setDiscoveredResources(data.resources || [])
+      } catch (e) {
+        console.error('Failed to fetch discovered resources:', e)
+      }
+    }
+
+    const mapResourceToWorkload = async (resourceName: string, workloadId: string) => {
+      try {
+        const formData = new FormData()
+        formData.append('workload_id', workloadId)
+        formData.append('resource_name', resourceName)
+        formData.append('mapped_by', 'admin')
+      
+        const res = await fetch(`${API_URL}/api/resources/map`, {
+          method: 'POST',
+          body: formData
+        })
+        const data = await res.json()
+        if (data.status === 'created' || data.status === 'updated') {
+          toast.success(`Resource mapped to workload`)
+          fetchDiscoveredResources()
+          fetchData()
+        }
+      } catch (e) {
+        toast.error('Failed to map resource')
+      }
+    }
+
+    const unmapResource = async (mappingId: number) => {
+      try {
+        await fetch(`${API_URL}/api/resources/map/${mappingId}`, { method: 'DELETE' })
+        toast.success('Resource unmapped')
+        fetchDiscoveredResources()
+        fetchData()
+      } catch (e) {
+        toast.error('Failed to unmap resource')
+      }
+    }
+
+    const openRecommendationDrawer = async (rec: any) => {
     setSelectedRec(rec)
     setIsDrawerOpen(true)
     setIsDetailsLoading(true)
@@ -1329,218 +1375,301 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'risp' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-5 gap-4">
-              {[
-                { l: 'CURRENT RI COVERAGE', v: `${stats?.ri_coverage ?? 0}%`, c: 'green' },
-                { l: 'CURRENT SP COVERAGE', v: `${stats?.sp_coverage ?? 0}%`, c: 'purple' },
-                { l: 'TARGET COVERAGE', v: `${stats?.target_coverage ?? 25}%`, c: 'white' },
-                { l: 'POTENTIAL SAVINGS', v: `$${stats?.ri_savings_potential ? Math.round(stats.ri_savings_potential / 1000) + 'K' : stats?.ai_savings ? Math.round(stats.ai_savings) : '0'}`, c: 'green' },
-                { l: 'ACTIVE EVALUATIONS', v: `${evaluations.length}`, c: 'yellow' }
-              ].map((s, i) => (
-                <div key={i} className="bg-slate-900 rounded-xl border border-slate-800 p-5">
-                  <p className="text-xs text-slate-400 mb-1">{s.l}</p>
-                  <p className={`text-3xl font-bold ${s.c === 'green' ? 'text-green-400' : s.c === 'purple' ? 'text-purple-400' : s.c === 'yellow' ? 'text-yellow-400' : 'text-white'}`}>{s.v}</p>
-                </div>
-              ))}
-            </div>
+                {activeTab === 'risp' && (
+                  <div className="space-y-6">
+                    {/* Header with Stats */}
+                    <div className="grid grid-cols-5 gap-4">
+                      {[
+                        { l: 'CURRENT RI COVERAGE', v: `${stats?.ri_coverage ?? 0}%`, c: 'green' },
+                        { l: 'CURRENT SP COVERAGE', v: `${stats?.sp_coverage ?? 0}%`, c: 'purple' },
+                        { l: 'TARGET COVERAGE', v: `${stats?.target_coverage ?? 25}%`, c: 'white' },
+                        { l: 'POTENTIAL SAVINGS', v: `$${stats?.ri_savings_potential ? Math.round(stats.ri_savings_potential / 1000) + 'K' : stats?.ai_savings ? Math.round(stats.ai_savings) : '0'}`, c: 'green' },
+                        { l: 'ACTIVE EVALUATIONS', v: `${evaluations.length}`, c: 'yellow' }
+                      ].map((s, i) => (
+                        <div key={i} className="bg-slate-900 rounded-xl border border-slate-800 p-5">
+                          <p className="text-xs text-slate-400 mb-1">{s.l}</p>
+                          <p className={`text-3xl font-bold ${s.c === 'green' ? 'text-green-400' : s.c === 'purple' ? 'text-purple-400' : s.c === 'yellow' ? 'text-yellow-400' : 'text-white'}`}>{s.v}</p>
+                        </div>
+                      ))}
+                    </div>
 
-            {/* SaaS Evaluations Section */}
-            <div className="bg-slate-900 rounded-xl border border-amber-500/30 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-400" />
-                  <h3 className="font-semibold text-white">Upcoming SaaS / Technology Evaluations</h3>
-                  <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs rounded">Affects RI/SP Decisions</span>
-                </div>
-              </div>
-              <p className="text-sm text-slate-400 mb-4">Track technology evaluations that may replace Azure workloads. Agents will automatically HOLD commitments for affected resources until decisions are made.</p>
-              
-              {evaluations.length > 0 ? (
-                <table className="w-full mb-4">
-                  <thead><tr className="text-left text-xs text-slate-400 border-b border-slate-800"><th className="pb-3">Evaluation</th><th className="pb-3">Vendor</th><th className="pb-3">Workload</th><th className="pb-3">Status</th><th className="pb-3">Decision Date</th><th className="pb-3">Adoption Risk</th><th className="pb-3">Holding</th><th className="pb-3">Actions</th></tr></thead>
-                  <tbody>
-                    {evaluations.map((e: any) => (
-                      <tr key={e.id} className="border-b border-slate-800/50 text-sm">
-                        <td className="py-3 font-medium text-white">{e.name}</td>
-                        <td className="py-3 text-slate-400">{e.vendor}</td>
-                        <td className="py-3 text-slate-400">{workloads.find((w: any) => w.id === e.workload_id)?.name || 'Unknown'}</td>
-                        <td className="py-3"><span className={`px-2 py-1 rounded text-xs ${e.status === 'poc' ? 'bg-blue-500/20 text-blue-400' : e.status === 'pilot' ? 'bg-purple-500/20 text-purple-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{e.status?.toUpperCase()}</span></td>
-                        <td className="py-3 text-slate-400">{e.decision_date || 'TBD'}</td>
-                        <td className="py-3"><span className={`px-2 py-1 rounded text-xs ${e.adoption_probability_pct >= 70 ? 'bg-red-500/20 text-red-400' : e.adoption_probability_pct >= 40 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>{e.adoption_probability_pct}%</span></td>
-                        <td className="py-3">{e.hold_commitments ? <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs rounded">HOLDING</span> : <span className="text-slate-500 text-xs">No</span>}</td>
-                        <td className="py-3"><button onClick={() => deleteEvaluation(e.id)} className="text-red-400 hover:text-red-300 text-xs">Delete</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="text-center py-6 text-slate-500 mb-4">No active evaluations. Add one below to track SaaS decisions that affect RI/SP commitments.</div>
-              )}
+                    {/* Sub-Tab Navigation */}
+                    <div className="flex gap-2 border-b border-slate-800 pb-2">
+                      {[
+                        { id: 'setup', label: '1. Setup Workloads', icon: Database },
+                        { id: 'evaluations', label: '2. SaaS Evaluations', icon: AlertTriangle },
+                        { id: 'recommendations', label: '3. AI Recommendations', icon: Sparkles }
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          onClick={() => { setRispSubTab(tab.id as any); if (tab.id === 'setup') fetchDiscoveredResources(); }}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+                            rispSubTab === tab.id
+                              ? 'bg-slate-800 text-white border-b-2 border-blue-500'
+                              : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                          }`}
+                        >
+                          <tab.icon className="w-4 h-4" />
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
 
-              {/* Add Evaluation Form */}
-              <div className="bg-slate-800/50 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-white mb-3">Add New Evaluation</h4>
-                <div className="grid grid-cols-6 gap-3">
-                  <input type="text" placeholder="Evaluation name (e.g., Snowflake POC)" value={newEvaluation.name} onChange={e => setNewEvaluation(prev => ({ ...prev, name: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white" />
-                  <input type="text" placeholder="Vendor" value={newEvaluation.vendor} onChange={e => setNewEvaluation(prev => ({ ...prev, vendor: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white" />
-                                    <select value={newEvaluation.workload_id} onChange={async (e) => {
-                                        const val = e.target.value
-                                        if (val.startsWith('new:')) {
-                                          // Create new workload from resource
-                                          const resourceName = val.replace('new:', '')
-                                          const rec = recommendations.find((r: any) => r.resource === resourceName)
-                                          try {
-                                            const res = await fetch(`${API_URL}/api/workloads`, {
-                                              method: 'POST',
-                                              headers: { 'Content-Type': 'application/json' },
-                                              body: JSON.stringify({
-                                                name: resourceName,
-                                                description: `Workload for ${rec?.type || 'resource'} - ${resourceName}`,
-                                                criticality: rec?.stability >= 95 ? 'high' : rec?.stability >= 85 ? 'medium' : 'low',
-                                                owner: 'FinOps Team',
-                                                azure_services: [rec?.type || 'Virtual Machines'],
-                                                monthly_cost: rec?.ea_price || rec?.monthly_cost || 0
-                                              })
-                                            })
-                                            const data = await res.json()
-                                            if (data.id) {
-                                              toast.success(`Workload "${resourceName}" created`)
-                                              await fetchData()
-                                              setNewEvaluation(prev => ({ ...prev, workload_id: data.id }))
-                                            }
-                                          } catch (err) {
-                                            toast.error('Failed to create workload')
-                                          }
-                                        } else {
-                                          setNewEvaluation(prev => ({ ...prev, workload_id: val }))
-                                        }
-                                      }} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white">
-                                      <option value="">Select Workload or Resource</option>
-                                      {workloads.length > 0 && <optgroup label="Registered Workloads">
-                                        {workloads.map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                                      </optgroup>}
-                                      <optgroup label="Create from Resource">
-                                        {recommendations.filter((r: any) => !workloads.some((w: any) => w.name === r.resource)).map((r: any, i: number) => (
-                                          <option key={`new-${i}`} value={`new:${r.resource}`}>{r.resource} ({r.type})</option>
-                                        ))}
-                                      </optgroup>
-                                    </select>
-                  <input type="date" placeholder="Decision Date" value={newEvaluation.decision_date} onChange={e => setNewEvaluation(prev => ({ ...prev, decision_date: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white" />
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400">Adoption:</span>
-                    <input type="range" min="0" max="100" value={newEvaluation.adoption_probability} onChange={e => setNewEvaluation(prev => ({ ...prev, adoption_probability: parseInt(e.target.value) }))} className="flex-1" />
-                    <span className="text-xs text-white w-8">{newEvaluation.adoption_probability}%</span>
-                  </div>
-                  <button onClick={createEvaluation} className="bg-amber-500 hover:bg-amber-600 text-black font-medium rounded px-4 py-2 text-sm">Add Evaluation</button>
-                </div>
-              </div>
-            </div>
+                    {/* Setup Workloads Tab */}
+                    {rispSubTab === 'setup' && (
+                      <div className="space-y-6">
+                        {/* Workload Registry */}
+                        <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
+                          <div className="flex items-center gap-3 mb-4">
+                            <Database className="w-5 h-5 text-blue-400" />
+                            <h3 className="font-semibold text-white">Workload Registry</h3>
+                            <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">{workloads.length} Workloads</span>
+                          </div>
+                          <p className="text-sm text-slate-400 mb-4">Business applications mapped to Azure resources. Map resources to workloads to enable intelligent RI/SP recommendations.</p>
+                          {workloads.length > 0 ? (
+                            <div className="grid grid-cols-3 gap-4">
+                              {workloads.map((w: any) => (
+                                <div key={w.id} className="bg-slate-800/50 rounded-lg p-4">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-medium text-white">{w.name}</h4>
+                                    <span className={`px-2 py-1 rounded text-xs ${w.status === 'active' ? 'bg-green-500/20 text-green-400' : w.status === 'evaluating' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-500/20 text-slate-400'}`}>{w.status?.toUpperCase()}</span>
+                                  </div>
+                                  <p className="text-sm text-slate-400 mb-2">{w.description || 'No description'}</p>
+                                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                                    <span>Owner: {w.owner_name || 'Unassigned'}</span>
+                                    <span>Criticality: {w.criticality || 'standard'}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 text-slate-500">No workloads registered. Create workloads to map Azure resources for intelligent recommendations.</div>
+                          )}
+                        </div>
 
-            {/* AI-Powered Recommendations with Workload Intelligence */}
-            <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3"><Sparkles className="w-5 h-5 text-purple-400" /><h3 className="font-semibold text-white">AI-Powered Commitment Recommendations</h3></div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded text-xs ${dataSource === 'azure' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{dataSource === 'azure' ? 'LIVE DATA' : 'DEMO DATA'}</span>
-                  <span className="px-3 py-1 bg-purple-500/20 text-purple-400 text-xs font-medium rounded-full">Multi-Agent Ensemble (GPT-5, O3, O4-Mini, GPT-4.1)</span>
-                </div>
-              </div>
-              <p className="text-sm text-slate-400 mb-4">Click any row to open the deep-dive drawer with AI analysis, workload context, and override options.</p>
+                        {/* Resource Discovery & Mapping */}
+                        <div className="bg-slate-900 rounded-xl border border-blue-500/30 p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <Layers className="w-5 h-5 text-blue-400" />
+                              <h3 className="font-semibold text-white">Azure Resource Discovery</h3>
+                              <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">{discoveredResources.length} Resources</span>
+                            </div>
+                            <button onClick={fetchDiscoveredResources} className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 text-sm rounded transition-colors">Refresh</button>
+                          </div>
+                          <p className="text-sm text-slate-400 mb-4">Map Azure resources to workloads for accurate RI/SP recommendations. Resources without workload mapping will use pattern matching.</p>
+                  
+                          {discoveredResources.length > 0 ? (
                             <table className="w-full">
-                              <thead><tr className="text-left text-xs text-slate-400 border-b border-slate-800"><th className="pb-3">Resource</th><th className="pb-3">Workload</th><th className="pb-3">Type</th><th className="pb-3">Monthly Cost</th><th className="pb-3">Risk</th><th className="pb-3">AI Action</th><th className="pb-3">Reason</th><th className="pb-3">Re-evaluate By</th><th className="pb-3">Your Decision</th></tr></thead>
+                              <thead><tr className="text-left text-xs text-slate-400 border-b border-slate-800"><th className="pb-3">Resource</th><th className="pb-3">Type</th><th className="pb-3">Resource Group</th><th className="pb-3">Mapped To</th><th className="pb-3">Actions</th></tr></thead>
                               <tbody>
-                                {(getAllSmartRecs().length > 0 ? getAllSmartRecs() : recommendations).map((r: any, i: number) => (
-                                  <tr key={i} className="border-b border-slate-800/50 text-sm hover:bg-slate-800/40">
-                                    <td className="py-4 font-medium text-white cursor-pointer" onClick={() => openRecommendationDrawer(r)}>{r.resource || r.sku || r.resource_id?.split('/').pop() || 'Resource'}</td>
-                                    <td className="py-4">{(() => {
-                                      const matchedWorkload = workloads.find((w: any) => w.name === r.resource || r.workload?.name === w.name)
-                                      return matchedWorkload ? <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">{matchedWorkload.name}</span> : r.workload?.name ? <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">{r.workload.name}</span> : <span className="text-slate-500 text-xs">Unassigned</span>
-                                    })()}</td>
-                                    <td className="py-4 text-slate-400">{r.type || r.recommendation_type || 'RI'}</td>
-                                    <td className="py-4 text-white">${(r.monthly_cost || r.net_savings || 0).toLocaleString()}</td>
-                                    <td className="py-4">
-                                      {r.intelligence?.risk_score !== undefined || r.agent_analysis?.risk_score !== undefined ? (
-                                        <span className={`px-2 py-1 rounded text-xs font-medium ${(r.intelligence?.risk_score || r.agent_analysis?.risk_score || 0) <= 3 ? 'bg-green-500/20 text-green-400' : (r.intelligence?.risk_score || r.agent_analysis?.risk_score || 0) <= 6 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
-                                          {(r.intelligence?.risk_score || r.agent_analysis?.risk_score || 0).toFixed(1)}/10
-                                        </span>
-                                      ) : <span className="text-slate-500 text-xs">-</span>}
+                                {discoveredResources.slice(0, 10).map((r: any, i: number) => (
+                                  <tr key={i} className="border-b border-slate-800/50 text-sm">
+                                    <td className="py-3 font-medium text-white">{r.name}</td>
+                                    <td className="py-3 text-slate-400">{r.type?.split('/').pop() || r.category}</td>
+                                    <td className="py-3 text-slate-400">{r.resource_group || '-'}</td>
+                                    <td className="py-3">
+                                      {r.is_mapped ? (
+                                        <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded">{r.workload_name}</span>
+                                      ) : (
+                                        <select
+                                          value={resourceMappingWorkload}
+                                          onChange={(e) => { if (e.target.value) mapResourceToWorkload(r.name, e.target.value); }}
+                                          className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white"
+                                        >
+                                          <option value="">Select workload...</option>
+                                          {workloads.map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                                        </select>
+                                      )}
                                     </td>
-                                    <td className="py-4">
-                                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                        (r._action || r.intelligence?.action) === 'approve' ? 'bg-green-500/20 text-green-400' :
-                                        (r._action || r.intelligence?.action) === 'modify' ? 'bg-blue-500/20 text-blue-400' :
-                                        (r._action || r.intelligence?.action) === 'hold' ? 'bg-yellow-500/20 text-yellow-400' :
-                                        (r._action || r.intelligence?.action) === 'block' ? 'bg-red-500/20 text-red-400' :
-                                        'bg-green-500/20 text-green-400'
-                                      }`}>
-                                        {(r._action || r.intelligence?.action || r.recommendation || 'APPROVE').toUpperCase()}
-                                      </span>
-                                    </td>
-                                    <td className="py-4 text-slate-400 text-xs max-w-xs truncate">{r.intelligence?.reason || r.intelligence?.evaluation_name || '-'}</td>
-                                    <td className="py-4">{r.evaluation?.decision_date || r.intelligence?.decision_date ? <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs rounded">{r.evaluation?.decision_date || r.intelligence?.decision_date}</span> : <span className="text-slate-500 text-xs">-</span>}</td>
-                                    <td className="py-4">
-                                      <div className="flex items-center gap-1">
-                                        <button onClick={(e) => { e.stopPropagation(); recordRispAction('approve', r) }} className="px-2 py-1 bg-green-500/20 hover:bg-green-500/40 text-green-400 text-xs rounded transition-colors" title="Approve this recommendation">Approve</button>
-                                        <button onClick={(e) => { e.stopPropagation(); recordRispAction('hold', r) }} className="px-2 py-1 bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 text-xs rounded transition-colors" title="Put on hold">Hold</button>
-                                        <button onClick={(e) => { e.stopPropagation(); recordRispAction('block', r) }} className="px-2 py-1 bg-red-500/20 hover:bg-red-500/40 text-red-400 text-xs rounded transition-colors" title="Block this recommendation">Block</button>
-                                      </div>
+                                    <td className="py-3">
+                                      {r.is_mapped && r.mapping_id && (
+                                        <button onClick={() => unmapResource(r.mapping_id)} className="text-red-400 hover:text-red-300 text-xs">Unmap</button>
+                                      )}
                                     </td>
                                   </tr>
                                 ))}
                               </tbody>
                             </table>
-            </div>
-
-            {/* Workload Registry */}
-            <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Database className="w-5 h-5 text-blue-400" />
-                <h3 className="font-semibold text-white">Workload Registry</h3>
-                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">{workloads.length} Workloads</span>
-              </div>
-              <p className="text-sm text-slate-400 mb-4">Business applications mapped to Azure resources. Add context like "PACS - Picture Archiving System" to help AI agents make better commitment decisions.</p>
-              {workloads.length > 0 ? (
-                <div className="grid grid-cols-3 gap-4">
-                  {workloads.map((w: any) => (
-                    <div key={w.id} className="bg-slate-800/50 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-white">{w.name}</h4>
-                        <span className={`px-2 py-1 rounded text-xs ${w.status === 'active' ? 'bg-green-500/20 text-green-400' : w.status === 'evaluating' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-500/20 text-slate-400'}`}>{w.status?.toUpperCase()}</span>
+                          ) : (
+                            <div className="text-center py-6 text-slate-500">No resources discovered. Click Refresh to scan your Azure subscription.</div>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm text-slate-400 mb-2">{w.description || 'No description'}</p>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <span>Owner: {w.owner_name || 'Unassigned'}</span>
-                        <span>Criticality: {w.criticality || 'standard'}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-slate-500">No workloads registered. Workloads are created when you import Azure data or add them via the API.</div>
-              )}
-            </div>
+                    )}
 
-            {/* RI vs SP Guidance */}
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4"><Lock className="w-5 h-5 text-green-400" /><h4 className="font-semibold text-green-400">Choose Reserved Instances When:</h4></div>
-                <ul className="space-y-2 text-sm text-slate-300">
-                  {['Workload stability >90% over 6+ months', 'Single VM family with no expected changes', 'Maximum savings priority (up to 56% off)', 'Mission-critical apps that won\'t migrate'].map((t, i) => <li key={i} className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-400" />{t}</li>)}
-                </ul>
-                <div className="mt-4 p-3 bg-green-900/30 rounded-lg"><p className="text-sm text-green-400 font-medium">3-Year RI: Up to 56% savings</p><p className="text-sm text-green-400">1-Year RI: Up to 36% savings</p></div>
-              </div>
-              <div className="bg-purple-900/20 border border-purple-500/30 rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4"><Layers className="w-5 h-5 text-purple-400" /><h4 className="font-semibold text-purple-400">Choose Savings Plans When:</h4></div>
-                <ul className="space-y-2 text-sm text-slate-300">
-                  {['Workloads growing or changing', 'Multi-service usage (VMs, AKS, Functions)', 'Need flexibility to change VM families/regions', 'AI/ML workloads with evolving GPU needs'].map((t, i) => <li key={i} className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-purple-400" />{t}</li>)}
-                </ul>
-                <div className="mt-4 p-3 bg-purple-900/30 rounded-lg"><p className="text-sm text-purple-400 font-medium">3-Year SP: Up to 52% savings</p><p className="text-sm text-purple-400">1-Year SP: Up to 33% savings</p></div>
-              </div>
-            </div>
-          </div>
-        )}
+                    {/* SaaS Evaluations Tab */}
+                    {rispSubTab === 'evaluations' && (
+                      <div className="bg-slate-900 rounded-xl border border-amber-500/30 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <AlertTriangle className="w-5 h-5 text-amber-400" />
+                            <h3 className="font-semibold text-white">Upcoming SaaS / Technology Evaluations</h3>
+                            <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs rounded">Affects RI/SP Decisions</span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-slate-400 mb-4">Track technology evaluations that may replace Azure workloads. Agents will automatically HOLD commitments for affected resources until decisions are made.</p>
+                
+                        {evaluations.length > 0 ? (
+                          <table className="w-full mb-4">
+                            <thead><tr className="text-left text-xs text-slate-400 border-b border-slate-800"><th className="pb-3">Evaluation</th><th className="pb-3">Vendor</th><th className="pb-3">Workload</th><th className="pb-3">Status</th><th className="pb-3">Decision Date</th><th className="pb-3">Adoption Risk</th><th className="pb-3">Holding</th><th className="pb-3">Actions</th></tr></thead>
+                            <tbody>
+                              {evaluations.map((e: any) => (
+                                <tr key={e.id} className="border-b border-slate-800/50 text-sm">
+                                  <td className="py-3 font-medium text-white">{e.name}</td>
+                                  <td className="py-3 text-slate-400">{e.vendor}</td>
+                                  <td className="py-3 text-slate-400">{workloads.find((w: any) => w.id === e.workload_id)?.name || 'Unknown'}</td>
+                                  <td className="py-3"><span className={`px-2 py-1 rounded text-xs ${e.status === 'poc' ? 'bg-blue-500/20 text-blue-400' : e.status === 'pilot' ? 'bg-purple-500/20 text-purple-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{e.status?.toUpperCase()}</span></td>
+                                  <td className="py-3 text-slate-400">{e.decision_date || 'TBD'}</td>
+                                  <td className="py-3"><span className={`px-2 py-1 rounded text-xs ${e.adoption_probability_pct >= 70 ? 'bg-red-500/20 text-red-400' : e.adoption_probability_pct >= 40 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>{e.adoption_probability_pct}%</span></td>
+                                  <td className="py-3">{e.hold_commitments ? <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs rounded">HOLDING</span> : <span className="text-slate-500 text-xs">No</span>}</td>
+                                  <td className="py-3"><button onClick={() => deleteEvaluation(e.id)} className="text-red-400 hover:text-red-300 text-xs">Delete</button></td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <div className="text-center py-6 text-slate-500 mb-4">No active evaluations. Add one below to track SaaS decisions that affect RI/SP commitments.</div>
+                        )}
+
+                        {/* Add Evaluation Form */}
+                        <div className="bg-slate-800/50 rounded-lg p-4">
+                          <h4 className="text-sm font-medium text-white mb-3">Add New Evaluation</h4>
+                          <div className="grid grid-cols-6 gap-3">
+                            <input type="text" placeholder="Evaluation name (e.g., Snowflake POC)" value={newEvaluation.name} onChange={e => setNewEvaluation(prev => ({ ...prev, name: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white" />
+                            <input type="text" placeholder="Vendor" value={newEvaluation.vendor} onChange={e => setNewEvaluation(prev => ({ ...prev, vendor: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white" />
+                            <select value={newEvaluation.workload_id} onChange={async (e) => {
+                              const val = e.target.value
+                              if (val.startsWith('new:')) {
+                                const resourceName = val.replace('new:', '')
+                                const rec = recommendations.find((r: any) => r.resource === resourceName)
+                                try {
+                                  const res = await fetch(`${API_URL}/api/workloads`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      name: resourceName,
+                                      description: `Workload for ${rec?.type || 'resource'} - ${resourceName}`,
+                                      criticality: rec?.stability >= 95 ? 'high' : rec?.stability >= 85 ? 'medium' : 'low',
+                                      owner: 'FinOps Team',
+                                      azure_services: [rec?.type || 'Virtual Machines'],
+                                      monthly_cost: rec?.ea_price || rec?.monthly_cost || 0
+                                    })
+                                  })
+                                  const data = await res.json()
+                                  if (data.id) {
+                                    toast.success(`Workload "${resourceName}" created`)
+                                    await fetchData()
+                                    setNewEvaluation(prev => ({ ...prev, workload_id: data.id }))
+                                  }
+                                } catch (err) {
+                                  toast.error('Failed to create workload')
+                                }
+                              } else {
+                                setNewEvaluation(prev => ({ ...prev, workload_id: val }))
+                              }
+                            }} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white">
+                              <option value="">Select Workload or Resource</option>
+                              {workloads.length > 0 && <optgroup label="Registered Workloads">
+                                {workloads.map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                              </optgroup>}
+                              <optgroup label="Create from Resource">
+                                {recommendations.filter((r: any) => !workloads.some((w: any) => w.name === r.resource)).map((r: any, i: number) => (
+                                  <option key={`new-${i}`} value={`new:${r.resource}`}>{r.resource} ({r.type})</option>
+                                ))}
+                              </optgroup>
+                            </select>
+                            <input type="date" placeholder="Decision Date" value={newEvaluation.decision_date} onChange={e => setNewEvaluation(prev => ({ ...prev, decision_date: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white" />
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-400">Adoption:</span>
+                              <input type="range" min="0" max="100" value={newEvaluation.adoption_probability} onChange={e => setNewEvaluation(prev => ({ ...prev, adoption_probability: parseInt(e.target.value) }))} className="flex-1" />
+                              <span className="text-xs text-white w-8">{newEvaluation.adoption_probability}%</span>
+                            </div>
+                            <button onClick={createEvaluation} className="bg-amber-500 hover:bg-amber-600 text-black font-medium rounded px-4 py-2 text-sm">Add Evaluation</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                            {/* AI Recommendations Tab */}
+                            {rispSubTab === 'recommendations' && (
+                              <div className="space-y-6">
+                                {/* AI-Powered Recommendations with Workload Intelligence */}
+                                <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
+                                  <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3"><Sparkles className="w-5 h-5 text-purple-400" /><h3 className="font-semibold text-white">AI-Powered Commitment Recommendations</h3></div>
+                                    <div className="flex items-center gap-2">
+                                      <span className={`px-2 py-1 rounded text-xs ${dataSource === 'azure' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{dataSource === 'azure' ? 'LIVE DATA' : 'DEMO DATA'}</span>
+                                      <span className="px-3 py-1 bg-purple-500/20 text-purple-400 text-xs font-medium rounded-full">Multi-Agent Ensemble (GPT-5, O3, O4-Mini, GPT-4.1)</span>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm text-slate-400 mb-4">Click any row to open the deep-dive drawer with AI analysis, workload context, and override options.</p>
+                                  <table className="w-full">
+                                    <thead><tr className="text-left text-xs text-slate-400 border-b border-slate-800"><th className="pb-3">Resource</th><th className="pb-3">Workload</th><th className="pb-3">Type</th><th className="pb-3">Monthly Cost</th><th className="pb-3">Risk</th><th className="pb-3">AI Action</th><th className="pb-3">Reason</th><th className="pb-3">Re-evaluate By</th><th className="pb-3">Your Decision</th></tr></thead>
+                                    <tbody>
+                                      {(getAllSmartRecs().length > 0 ? getAllSmartRecs() : recommendations).map((r: any, i: number) => (
+                                        <tr key={i} className="border-b border-slate-800/50 text-sm hover:bg-slate-800/40">
+                                          <td className="py-4 font-medium text-white cursor-pointer" onClick={() => openRecommendationDrawer(r)}>{r.resource || r.sku || r.resource_id?.split('/').pop() || 'Resource'}</td>
+                                          <td className="py-4">{(() => {
+                                            const matchedWorkload = workloads.find((w: any) => w.name === r.resource || r.workload?.name === w.name)
+                                            return matchedWorkload ? <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">{matchedWorkload.name}</span> : r.workload?.name ? <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">{r.workload.name}</span> : <span className="text-slate-500 text-xs">Unassigned</span>
+                                          })()}</td>
+                                          <td className="py-4 text-slate-400">{r.type || r.recommendation_type || 'RI'}</td>
+                                          <td className="py-4 text-white">${(r.monthly_cost || r.net_savings || 0).toLocaleString()}</td>
+                                          <td className="py-4">
+                                            {r.intelligence?.risk_score !== undefined || r.agent_analysis?.risk_score !== undefined ? (
+                                              <span className={`px-2 py-1 rounded text-xs font-medium ${(r.intelligence?.risk_score || r.agent_analysis?.risk_score || 0) <= 3 ? 'bg-green-500/20 text-green-400' : (r.intelligence?.risk_score || r.agent_analysis?.risk_score || 0) <= 6 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                {(r.intelligence?.risk_score || r.agent_analysis?.risk_score || 0).toFixed(1)}/10
+                                              </span>
+                                            ) : <span className="text-slate-500 text-xs">-</span>}
+                                          </td>
+                                          <td className="py-4">
+                                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                              (r._action || r.intelligence?.action) === 'approve' ? 'bg-green-500/20 text-green-400' :
+                                              (r._action || r.intelligence?.action) === 'modify' ? 'bg-blue-500/20 text-blue-400' :
+                                              (r._action || r.intelligence?.action) === 'hold' ? 'bg-yellow-500/20 text-yellow-400' :
+                                              (r._action || r.intelligence?.action) === 'block' ? 'bg-red-500/20 text-red-400' :
+                                              'bg-green-500/20 text-green-400'
+                                            }`}>
+                                              {(r._action || r.intelligence?.action || r.recommendation || 'APPROVE').toUpperCase()}
+                                            </span>
+                                          </td>
+                                          <td className="py-4 text-slate-400 text-xs max-w-xs truncate">{r.intelligence?.reason || r.intelligence?.evaluation_name || '-'}</td>
+                                          <td className="py-4">{r.evaluation?.decision_date || r.intelligence?.decision_date ? <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs rounded">{r.evaluation?.decision_date || r.intelligence?.decision_date}</span> : <span className="text-slate-500 text-xs">-</span>}</td>
+                                          <td className="py-4">
+                                            <div className="flex items-center gap-1">
+                                              <button onClick={(e) => { e.stopPropagation(); recordRispAction('approve', r) }} className="px-2 py-1 bg-green-500/20 hover:bg-green-500/40 text-green-400 text-xs rounded transition-colors" title="Approve this recommendation">Approve</button>
+                                              <button onClick={(e) => { e.stopPropagation(); recordRispAction('hold', r) }} className="px-2 py-1 bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 text-xs rounded transition-colors" title="Put on hold">Hold</button>
+                                              <button onClick={(e) => { e.stopPropagation(); recordRispAction('block', r) }} className="px-2 py-1 bg-red-500/20 hover:bg-red-500/40 text-red-400 text-xs rounded transition-colors" title="Block this recommendation">Block</button>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+
+                                {/* RI vs SP Guidance */}
+                                <div className="grid grid-cols-2 gap-6">
+                                  <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-6">
+                                    <div className="flex items-center gap-2 mb-4"><Lock className="w-5 h-5 text-green-400" /><h4 className="font-semibold text-green-400">Choose Reserved Instances When:</h4></div>
+                                    <ul className="space-y-2 text-sm text-slate-300">
+                                      {['Workload stability >90% over 6+ months', 'Single VM family with no expected changes', 'Maximum savings priority (up to 56% off)', 'Mission-critical apps that won\'t migrate'].map((t, i) => <li key={i} className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-400" />{t}</li>)}
+                                    </ul>
+                                    <div className="mt-4 p-3 bg-green-900/30 rounded-lg"><p className="text-sm text-green-400 font-medium">3-Year RI: Up to 56% savings</p><p className="text-sm text-green-400">1-Year RI: Up to 36% savings</p></div>
+                                  </div>
+                                  <div className="bg-purple-900/20 border border-purple-500/30 rounded-xl p-6">
+                                    <div className="flex items-center gap-2 mb-4"><Layers className="w-5 h-5 text-purple-400" /><h4 className="font-semibold text-purple-400">Choose Savings Plans When:</h4></div>
+                                    <ul className="space-y-2 text-sm text-slate-300">
+                                      {['Workloads growing or changing', 'Multi-service usage (VMs, AKS, Functions)', 'Need flexibility to change VM families/regions', 'AI/ML workloads with evolving GPU needs'].map((t, i) => <li key={i} className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-purple-400" />{t}</li>)}
+                                    </ul>
+                                    <div className="mt-4 p-3 bg-purple-900/30 rounded-lg"><p className="text-sm text-purple-400 font-medium">3-Year SP: Up to 52% savings</p><p className="text-sm text-purple-400">1-Year SP: Up to 33% savings</p></div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
         {activeTab === 'controls' && (
           <div className="grid grid-cols-2 gap-6">

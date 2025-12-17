@@ -3269,6 +3269,151 @@ async def get_workload(workload_id: int):
         }
 
 
+# ============ RESOURCE DISCOVERY & MAPPING ============
+
+@app.get("/api/resources/discovered")
+async def get_discovered_resources():
+    """Get all Azure resources with their mapping status."""
+    if not PHASE3_AVAILABLE:
+        return {"resources": [], "total": 0, "mapped": 0, "unmapped": 0}
+    
+    try:
+        azure = get_azure_manager()
+        resources = azure.list_resources()
+    except Exception as e:
+        return {"resources": [], "total": 0, "mapped": 0, "unmapped": 0, "error": str(e)}
+    
+    from app.models.workload_intelligence import WorkloadResourceMapping
+    
+    with get_db() as db:
+        mappings = {m.resource_name: {"workload_id": m.workload_id, "mapping_id": m.id}
+                   for m in db.query(WorkloadResourceMapping).all()}
+        workloads = {w.id: w.name for w in db.query(Workload).all()}
+    
+    result = []
+    for category, data in resources.get("categories", {}).items():
+        for resource in data.get("resources", []):
+            mapping = mappings.get(resource.get("name"))
+            result.append({
+                "name": resource.get("name"),
+                "type": resource.get("type"),
+                "location": resource.get("location"),
+                "resource_group": resource.get("resource_group"),
+                "category": category,
+                "is_mapped": mapping is not None,
+                "workload_id": mapping["workload_id"] if mapping else None,
+                "workload_name": workloads.get(mapping["workload_id"]) if mapping else None,
+                "mapping_id": mapping["mapping_id"] if mapping else None
+            })
+    
+    return {
+        "resources": result,
+        "total": len(result),
+        "mapped": sum(1 for r in result if r["is_mapped"]),
+        "unmapped": sum(1 for r in result if not r["is_mapped"])
+    }
+
+
+@app.post("/api/resources/map")
+async def map_resource_to_workload(
+    workload_id: int = Form(...),
+    resource_name: str = Form(...),
+    resource_id: str = Form(None),
+    resource_type: str = Form(None),
+    resource_group: str = Form(None),
+    estimated_monthly_cost: float = Form(0),
+    mapped_by: str = Form("admin")
+):
+    """Map an Azure resource to a workload."""
+    if not PHASE3_AVAILABLE:
+        raise HTTPException(503, "Phase 3 not available")
+    
+    from app.models.workload_intelligence import WorkloadResourceMapping
+    
+    with get_db() as db:
+        workload = db.query(Workload).filter(Workload.id == workload_id).first()
+        if not workload:
+            raise HTTPException(404, "Workload not found")
+        
+        existing = db.query(WorkloadResourceMapping).filter(
+            WorkloadResourceMapping.resource_name == resource_name
+        ).first()
+        
+        if existing:
+            existing.workload_id = workload_id
+            existing.mapped_by = mapped_by
+            existing.mapped_at = datetime.utcnow()
+            db.commit()
+            return {"status": "updated", "id": existing.id}
+        
+        new_mapping = WorkloadResourceMapping(
+            workload_id=workload_id,
+            resource_name=resource_name,
+            resource_id=resource_id,
+            resource_type=resource_type,
+            resource_group=resource_group,
+            estimated_monthly_cost=estimated_monthly_cost,
+            mapped_by=mapped_by,
+            mapping_source="manual"
+        )
+        db.add(new_mapping)
+        db.commit()
+        return {"status": "created", "id": new_mapping.id}
+
+
+@app.delete("/api/resources/map/{mapping_id}")
+async def unmap_resource(mapping_id: int):
+    """Remove a resource mapping."""
+    if not PHASE3_AVAILABLE:
+        raise HTTPException(503, "Phase 3 not available")
+    
+    from app.models.workload_intelligence import WorkloadResourceMapping
+    
+    with get_db() as db:
+        mapping = db.query(WorkloadResourceMapping).filter(WorkloadResourceMapping.id == mapping_id).first()
+        if not mapping:
+            raise HTTPException(404, "Mapping not found")
+        db.delete(mapping)
+        db.commit()
+        return {"status": "unmapped"}
+
+
+@app.get("/api/workloads/{workload_id}/resources")
+async def get_workload_resources(workload_id: int):
+    """Get all resources mapped to a specific workload."""
+    if not PHASE3_AVAILABLE:
+        raise HTTPException(503, "Phase 3 not available")
+    
+    from app.models.workload_intelligence import WorkloadResourceMapping
+    
+    with get_db() as db:
+        workload = db.query(Workload).filter(Workload.id == workload_id).first()
+        if not workload:
+            raise HTTPException(404, "Workload not found")
+        
+        mappings = db.query(WorkloadResourceMapping).filter(
+            WorkloadResourceMapping.workload_id == workload_id
+        ).all()
+        
+        return {
+            "workload_id": workload_id,
+            "workload_name": workload.name,
+            "resource_count": len(mappings),
+            "total_monthly_cost": sum(m.estimated_monthly_cost or 0 for m in mappings),
+            "resources": [
+                {
+                    "id": m.id,
+                    "resource_name": m.resource_name,
+                    "resource_type": m.resource_type,
+                    "resource_group": m.resource_group,
+                    "estimated_monthly_cost": m.estimated_monthly_cost,
+                    "mapped_at": m.mapped_at.isoformat() if m.mapped_at else None
+                }
+                for m in mappings
+            ]
+        }
+
+
 # ============ TECHNOLOGY EVALUATIONS ============
 
 @app.get("/api/evaluations")
