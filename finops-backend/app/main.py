@@ -1412,7 +1412,7 @@ async def get_agents():
                 "savings_identified": 0,
                 "color": "#d946ef",
                 "model": "gpt-5",
-                "endpoint": "https://pharma-agents-jnj-resource.cognitiveservices.azure.com",
+                "endpoint": os.getenv("GPT5_ENDPOINT", "https://your-resource.cognitiveservices.azure.com"),
             },
         ]
         return agents
@@ -1538,7 +1538,7 @@ async def get_agents():
             "savings_identified": 4000,
             "color": "#d946ef",
             "model": "gpt-5",
-            "endpoint": "https://pharma-agents-jnj-resource.cognitiveservices.azure.com",
+            "endpoint": os.getenv("GPT5_ENDPOINT", "https://your-resource.cognitiveservices.azure.com"),
         },
     ]
     return agents
