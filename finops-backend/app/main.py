@@ -2775,6 +2775,43 @@ async def remove_risp_action(resource: str):
     return {"success": True, "message": f"Removed actions for {resource}"}
 
 
+# ============ RI REALLOCATION ANALYSIS ============
+
+@app.get("/api/reallocation/opportunities")
+async def get_reallocation_opportunities():
+    """
+    Get RI reallocation opportunities.
+    Cross-references existing RIs with active SaaS evaluations to identify
+    RIs that may need to be reallocated if workloads migrate to SaaS.
+    """
+    from app.services.reallocation_service import ReallocationService
+    
+    # Check if we're in demo mode
+    is_demo = demo_mode_enabled
+    
+    # Create service instance - always use demo data for now since live Azure RI data
+    # requires additional API setup
+    reallocation_svc = ReallocationService()
+    
+    try:
+        opportunities = reallocation_svc.analyze_reallocation_opportunities(demo_mode=is_demo)
+        return {
+            "success": True,
+            "data": opportunities,
+            "source": "demo" if is_demo else "azure"
+        }
+    except Exception as e:
+        print(f"Error getting reallocation opportunities: {e}")
+        import traceback
+        traceback.print_exc()
+        # Return demo data as fallback
+        return {
+            "success": True,
+            "data": reallocation_svc.analyze_reallocation_opportunities(demo_mode=True),
+            "source": "demo_fallback"
+        }
+
+
 # ============ LIVE AZURE DATA ENDPOINTS (Phase 1) ============
 
 @app.get("/api/azure/costs/daily")
