@@ -2,6 +2,8 @@
 
 An AI-powered Azure FinOps dashboard that automates cost optimization, RI/SP commitment decisions, and anomaly detection using a multi-agent ensemble architecture.
 
+> **Disclaimer**: ContosoHealth is a **fictitious healthcare provider** used for demonstration purposes only. All data, scenarios, and financial figures shown in demo mode are simulated and do not represent any real organization.
+
 ---
 
 ## Business Value
