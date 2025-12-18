@@ -1,173 +1,166 @@
-# FinOps AI Command Center
+# Azure FinOps AI Command Center
 
-An AI-powered Azure FinOps dashboard that automates cost optimization, RI/SP commitment decisions, and anomaly detection using a multi-agent ensemble (GPT-5, O3, O4-Mini, GPT-4.1).
+An AI-powered Azure FinOps dashboard that automates cost optimization, RI/SP commitment decisions, and anomaly detection using a multi-agent ensemble architecture.
 
-## Demo Video
+---
 
-Watch the complete walkthrough demonstrating the RI/SP decision workflow, SaaS evaluation tracking, document upload, and human-in-the-loop governance:
+## Business Value
 
-[![FinOps Demo Video](video_assets/screenshots/01_executive_summary.png)](https://github.com/gregnatkatz/finops/raw/mainbr/video_assets/finops_demo.mp4)
+### Acknowledgments
 
-**[Download Full Demo Video](https://github.com/gregnatkatz/finops/raw/mainbr/video_assets/finops_demo.mp4)**
+This project builds upon the excellent work of the **Azure Product Group** and their APIs for Azure Recommendations and Cost Optimization. Special thanks to the PG team for providing the foundational APIs that make intelligent cost management possible:
 
-The demo showcases a real healthcare scenario: ContosoHealth's Patient Front Door application (SQL Server + Windows VMs) being evaluated against PatientRUs App, a call center SaaS solution with 70% adoption probability.
+- **Azure Cost Management APIs** - Real-time cost data, budgets, and forecasting
+- **Azure Advisor APIs** - RI/SP recommendations, right-sizing suggestions, and best practices
+- **Azure Resource Graph** - Resource discovery and inventory management
+- **Azure Consumption APIs** - Usage details and reservation utilization
 
-## Why RI/SP Optimization Matters
+### The Challenge
 
-Reserved Instances (RI) and Savings Plans (SP) can reduce Azure compute costs by 33-56%, but making the wrong commitment decision can lock you into unused capacity for 1-3 years. This dashboard solves that problem by:
+Organizations using Azure face a critical challenge: Reserved Instances (RI) and Savings Plans (SP) can reduce compute costs by **33-56%**, but making the wrong commitment decision can lock you into unused capacity for 1-3 years. Traditional approaches rely on spreadsheets and manual analysis, leading to:
 
-1. **AI-Powered Risk Assessment** - Multi-agent ensemble analyzes workload stability, growth patterns, and technology evaluations before recommending commitments
-2. **SaaS Evaluation Tracking** - Automatically HOLD commitments when you're evaluating Snowflake, Databricks, PatientRUs, or other SaaS that might replace Azure workloads
-3. **Human-in-the-Loop Governance** - Approve, Hold, or Block each recommendation with full audit trail
-4. **Document Upload & Re-Analysis** - Upload contracts, vendor proposals, or technical assessments and re-run AI analysis with new context
-5. **Dynamic Pricing** - Configure your EA discount and see real-time RI/SP price calculations
-6. **Workload Registry** - Map business applications to Azure resources for intelligent commitment decisions
+- Missed savings opportunities worth tens of thousands per month
+- Commitments made on workloads about to migrate to SaaS
+- No visibility into technology evaluations affecting commitment decisions
+- Reactive rather than proactive cost management
 
-## Key Features
+### The Solution
 
-### Executive Summary Dashboard
+This FinOps AI Command Center provides **supplemental value** on top of Azure's native capabilities by introducing an **agentic framework** that addresses the growing complexity of SaaS proliferation and AI agent adoption in enterprise environments. Key differentiators include:
 
-The Executive Summary provides a real-time view of your Azure FinOps posture:
+**Intelligent SaaS Evaluation Tracking** - Before committing to a 3-year RI on SQL Server, the system automatically checks if you're evaluating PatientRUs, Snowflake, or other SaaS solutions that might replace that workload. Commitments are automatically placed on HOLD until decisions are made.
 
-![Executive Summary](screenshots/01_executive_summary.png)
+**Multi-Agent Ensemble Architecture** - Five specialized AI agents (Cost Sentinel, Commitment Advisor, Orphan Hunter, Right-Size Engine, SaaS Evaluator) cross-validate recommendations to ensure accuracy and reduce false positives.
 
-- **Monthly Azure Cost**: $824K with daily rate tracking
-- **Monthly Savings**: $100K with month-over-month comparison
-- **Anomalies Resolved**: 4/6 this month with resolution timeline
-- **Budget Status**: WARNING with budget monitoring
-- **RI Coverage**: 18% current vs 45% target
-- **Agent Savings**: Real-time tracking from 5+ active AI agents
+**Human-in-the-Loop Governance** - Every recommendation requires explicit approval. Upload contracts, vendor proposals, or technical assessments and re-run AI analysis with new context before making decisions.
 
-The **RI/SP Recommendation Actions** card tracks all your commitment decisions:
-- Approved count with total approved savings
-- Items on hold pending evaluation
-- Blocked recommendations
-- Approval rate percentage
+**RI Reallocation Analysis** - When workloads are being evaluated for SaaS migration, the system identifies existing Reserved Instances at risk and recommends reallocation options to preserve savings.
+
+### Why This Matters
+
+This project was created as a **personal value-add exploration** into how agentic frameworks can provide additional intelligence in the world of SaaS and Agent proliferation. As organizations increasingly adopt SaaS solutions and AI agents, the complexity of cost optimization decisions grows exponentially. This dashboard demonstrates how AI agents can:
+
+1. Cross-reference multiple data sources (Azure costs, SaaS evaluations, workload context)
+2. Provide risk-aware recommendations that consider business context
+3. Enable human oversight while automating routine analysis
+4. Adapt to changing technology landscapes
+
+---
+
+## Feature Walkthrough
+
+### Executive Summary
+
+The Executive Summary provides a real-time view of your Azure FinOps posture with key metrics at a glance.
+
+![Executive Summary](screenshots/executive_summary.png)
+
+The dashboard displays monthly Azure cost ($824K in demo mode), monthly savings achieved ($100K), anomaly resolution status (4/6 resolved), budget status with warnings, RI coverage (18% vs 45% target), and agent savings from 5+ active AI agents. The Anomaly Resolution Timeline shows active investigations and resolved issues with cost impact. Budget Guardrails display spending by department with progress bars. The RI/SP Recommendation Actions card tracks approved, held, and blocked recommendations with approval rate.
+
+### Command Center
+
+The Command Center provides operational visibility into real-time cost monitoring and AI agent activity.
+
+![Command Center](screenshots/command_center.png)
+
+Real-Time Anomaly Detection uses ML models to identify cost spikes with automatic investigation. The 6-Month Forecast chart shows projected spending trends. Quick Actions enable full resource scans, demo alerts, and RI purchase workflows. Budget Health displays department-level spending with visual progress indicators.
+
+### AI Agents
+
+The AI Agents tab shows the multi-agent ensemble architecture powering the dashboard.
+
+![AI Agents](screenshots/ai_agents.png)
+
+Primary Agents include Cost Sentinel (anomaly detection), Commitment Advisor (RI/SP optimization), and Orphan Hunter (unused resource identification). Validator Agents cross-check recommendations for accuracy. The Agent Orchestration panel shows active agent counts and cross-validation status.
+
+### Hidden Cost Hunter
+
+The Hidden Cost Hunter identifies and mitigates cost leaks across your Azure environment.
+
+![Hidden Cost Hunter](screenshots/hidden_cost_hunter.png)
+
+Categories tracked include Idle VMs ($18,500/mo detected, $15,200/mo mitigated), Orphaned Disks ($8,200/mo detected, $7,800/mo mitigated), Unused IPs ($3,400/mo detected, $3,200/mo mitigated), Over-provisioned DBs ($12,100/mo detected, $9,500/mo mitigated), and Stale Snapshots ($5,000/mo detected, $2,800/mo mitigated). Total recovery rate is 82% with $47.2K detected and $38.5K mitigated.
+
+### Budget Guardrails
+
+Budget Guardrails provide proactive budget monitoring with configurable alert thresholds.
+
+![Budget Guardrails](screenshots/budget_guardrails.png)
+
+Department budgets show current spend, allocated budget, and forecast with visual indicators. Clinical Systems shows $199K current vs $250K allocated with $218K forecast. Alert thresholds are configurable at 75% (info), 90% (warning), and 100% (critical) with escalation to Email, Slack, and PagerDuty. Daily Variance Monitoring chart shows spending patterns throughout the week.
 
 ### RI/SP Optimizer
 
-The RI/SP Optimizer is the core decision-making interface:
+The RI/SP Optimizer is the core decision-making interface for Reserved Instance and Savings Plan commitments.
 
-![RI/SP Optimizer](screenshots/06_risp_optimizer.png)
+![RI/SP Optimizer](screenshots/risp_optimizer.png)
 
-**Coverage Metrics**
-- Current RI Coverage: 18%
-- Current SP Coverage: 12%
-- Target Coverage: 45%
-- Potential Savings: $100K
-- Active Evaluations: 3
+Coverage metrics show current RI coverage (18%), SP coverage (12%), target coverage (45%), potential savings ($100K), and active evaluations (3). The four-tab workflow includes Setup Workloads (map business applications to Azure resources), SaaS Evaluations (track technology evaluations affecting commitments), AI Recommendations (review and approve/hold/block recommendations), and RI Reallocation (identify at-risk RIs and reallocation options).
 
-**Upcoming SaaS / Technology Evaluations**
+### RI Reallocation Analysis
 
-Track technology evaluations that may replace Azure workloads. The system automatically HOLDs commitments for affected resources until decisions are made.
+The RI Reallocation Analysis feature identifies Reserved Instances at risk due to SaaS migrations and recommends reallocation options.
 
-| Evaluation | Vendor | Workload | Status | Decision Date | Adoption Risk | Holding |
-|------------|--------|----------|--------|---------------|---------------|---------|
-| PatientRUs App | PatientRUs Inc. | Patient Front Door | POC | 2026-02-08 | 70% | HOLDING |
-| Snowflake Enterprise | Snowflake | Data Analytics Platform | POC | 2026-03-10 | 65% | HOLDING |
-| Databricks Unity Catalog | Databricks | Data Analytics Platform | EVALUATING | 2026-04-09 | 45% | HOLDING |
-| Google Cloud Healthcare API | Google Cloud | PACS Imaging | EVALUATING | 2026-06-08 | 25% | No |
+![RI Reallocation](screenshots/ri_reallocation_analysis.png)
 
-**AI-Powered Commitment Recommendations**
+Summary metrics show at-risk RIs (2), total savings at risk ($13K), reallocation options available (1), and total existing RIs (12). Each at-risk RI displays the reservation name, SKU, remaining term, monthly cost, and savings at risk. The Affected by SaaS Evaluation section shows which evaluation is causing the risk, adoption probability, and decision date. Recommended actions include REALLOCATE NOW, EXCHANGE OR REFUND, MONITOR AND PREPARE, or WAIT FOR DECISION with urgency levels. Reallocation Options show compatible workloads with compatibility scores.
 
-Each recommendation shows:
-- Resource name and workload assignment
-- Service type (SQL Server, Virtual Machines, Kubernetes, GPU VMs)
-- Monthly cost at current rates
-- AI risk score and confidence level
-- Recommended action (1-Year RI, 3-Year RI, 1-Year SP, 3-Year SP, or HOLD)
-- Reasoning and re-evaluation date
-- **Your Decision**: Approve, Hold, or Block buttons
+### Controls & Alerts
 
-**Workload Registry**
+The Controls & Alerts tab configures automation controls and alert thresholds.
 
-Business applications mapped to Azure resources with context to help AI agents make better commitment decisions:
+![Controls & Alerts](screenshots/controls_alerts.png)
 
-| Workload | Status | Description | Owner | Criticality |
-|----------|--------|-------------|-------|-------------|
-| Patient Front Door | EVALUATING | Patient scheduling, check-in, and call center application running on SQL Server and Windows VMs | Jennifer Martinez | Mission Critical |
-| PACS Imaging | ACTIVE | Picture Archiving and Communication System for radiology imaging storage and retrieval | Dr. Sarah Chen | Mission Critical |
-| Epic Integration | ACTIVE | Epic EHR integration layer running on RHEL VMs | Mike Johnson | Mission Critical |
-| Data Analytics Platform | EVALUATING | Azure Synapse-based analytics for population health insights | Lisa Park | High |
-| ASR Disaster Recovery | ACTIVE | Azure Site Recovery for business continuity | Tom Williams | High |
-| ML Training Pipeline | ACTIVE | GPU-based machine learning for diagnostic imaging AI | Dr. James Lee | Standard |
+Automation Controls include Auto-Rightsizing (low risk), Dev/Test Auto-Shutdown (low risk), Orphan Cleanup (low risk), Storage Tiering (low risk), Spot Instance Fallback (medium risk), and RI Auto-Purchase (high risk). Each control has a toggle and risk indicator. Alert Configuration shows thresholds for daily variance (10%, 15%), budget thresholds (75%, 90%, 100%), and anomaly detection with notification channels.
 
-### Recommendation Drawer (Deep Dive)
+### Mission Critical
 
-Click any recommendation to open the deep-dive drawer with:
+The Mission Critical tab protects healthcare systems with guaranteed uptime and cost predictability.
 
-**Resource Details**
-- Resource name, service type, and monthly cost
-- Workload assignment with application context
+![Mission Critical](screenshots/mission_critical.png)
 
-**AI Agent Analysis**
-- Risk Score (0-10) based on workload stability and evaluation risk
-- Confidence level from multi-agent ensemble
-- Recommended action with detailed reasoning
-- Models consulted: GPT-5, O3, O4-Mini, GPT-4.1
+Protected workloads include Epic Integration (healthy), PACS Imaging (healthy), Patient Front Door (warning due to SaaS evaluation), Data Analytics Platform (healthy), and ASR Disaster Recovery (healthy). Each workload shows monthly cost, protection level, coverage type, and capacity headroom with SLA protection status.
 
-**Supporting Documents**
-- Drag-and-drop file upload zone
-- Supports PDF, Word, Excel documents
-- Upload contracts, vendor proposals, or technical assessments
-- **Re-run AI Analysis** button to incorporate new document context
+### Settings
 
-**Manual Override**
-- APPROVE: Accept the recommendation and proceed with commitment
-- MODIFY: Adjust commitment terms
-- HOLD: Defer decision pending more information
-- BLOCK: Reject the recommendation
+The Settings tab configures Azure connection, automation controls, and discount settings.
 
-### Settings & Configuration
+![Settings](screenshots/settings.png)
 
-![Settings](screenshots/09_settings.png)
+Azure Connection shows tenant configuration status with Tenant ID, Client ID, and Subscription ID. Discovery Results display scanned resources. Manual Data Import allows pasting Azure Advisor CSV exports when live API access is blocked. Automation Controls configure auto-shutdown schedules, RI purchase automation, orphan cleanup, right-sizing, budget alerts, and circuit breakers. RI/SP Discount Settings configure EA discount (12%), RI 1-Year (36%), RI 3-Year (56%), SP 1-Year (33%), and SP 3-Year (52%) discounts.
 
-**RI/SP Discount Settings**
+---
 
-Configure your organization's discount percentages:
+## Installation Guide (Addendum)
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| EA Discount | 12% | Enterprise Agreement discount off list price |
-| RI 1-Year | 36% | Reserved Instance 1-year discount off EA price |
-| RI 3-Year | 56% | Reserved Instance 3-year discount off EA price |
-| SP 1-Year | 33% | Savings Plan 1-year discount off EA price |
-| SP 3-Year | 52% | Savings Plan 3-year discount off EA price |
+### Prerequisites
 
-Settings persist and dynamically recalculate all pricing across the dashboard.
+- Python 3.11+ with Poetry
+- Node.js 18+ with npm
+- Azure subscription (optional - demo mode available)
+- Azure OpenAI resource (for AI agent functionality)
 
-**Azure Connection**
-
-Connect to your Azure tenant for live data or use demo mode with simulated data.
-
-**Manual Data Import**
-
-For organizations with Conditional Access policies blocking service principals:
-- Export recommendations from Azure Portal > Advisor > Download as CSV
-- Paste into Settings > Manual Data Import
-- AI agents still analyze and provide recommendations
-
-## Quick Start (5 Minutes)
-
-### Step 1: Clone and Install
+### Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/gregnatkatz/finops.git
 cd finops
-
-# Backend
-cd finops-backend
-poetry install
-cp .env.example .env
-
-# Frontend
-cd ../finops-frontend
-npm install
 ```
 
-### Step 2: Configure Environment
+### Step 2: Install Backend Dependencies
 
-Edit `finops-backend/.env`:
+```bash
+cd finops-backend
+poetry install
+```
+
+### Step 3: Configure Environment Variables
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your configuration:
 
 ```env
 # Required: Azure OpenAI for AI agents
@@ -176,128 +169,69 @@ AZURE_OPENAI_API_KEY=your-api-key
 AZURE_OPENAI_DEPLOYMENT=gpt-4
 
 # Optional: Azure credentials for live data
-AZURE_TENANT_ID=
-AZURE_CLIENT_ID=
-AZURE_CLIENT_SECRET=
-AZURE_SUBSCRIPTION_ID=
+AZURE_TENANT_ID=your-tenant-id
+AZURE_CLIENT_ID=your-client-id
+AZURE_CLIENT_SECRET=your-client-secret
+AZURE_SUBSCRIPTION_ID=your-subscription-id
 ```
 
-### Step 3: Run
+### Step 4: Install Frontend Dependencies
 
 ```bash
-# Terminal 1: Backend
-cd finops-backend
-poetry run uvicorn app.main:app --reload --port 8000
+cd ../finops-frontend
+npm install
+```
 
-# Terminal 2: Frontend
+### Step 5: Start the Backend Server
+
+```bash
+cd ../finops-backend
+poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Step 6: Start the Frontend Development Server
+
+In a new terminal:
+
+```bash
 cd finops-frontend
 npm run dev
 ```
 
-Open http://localhost:5173 - the dashboard runs in demo mode with simulated healthcare data until you connect Azure.
+### Step 7: Access the Dashboard
 
-## Connect Your Azure Tenant
+Open http://localhost:5173 in your browser. The dashboard runs in demo mode with simulated ContosoHealth data (89 hospitals, $824.2K/month spend, $100K savings opportunity) until you connect Azure credentials.
 
-### Create App Registration (5 minutes)
+### Connecting to Azure (Optional)
 
-1. Go to **Azure Portal > Azure Active Directory > App registrations**
-2. Click **New registration**, name it "FinOps Dashboard", click Register
-3. Copy the **Application (client) ID** and **Directory (tenant) ID**
-4. Go to **Certificates & secrets > New client secret**
-5. Copy the **secret value immediately** (it won't show again)
+To use live Azure data instead of demo mode:
 
-### Assign Permissions (2 minutes)
+1. Create an App Registration in Azure AD
+2. Grant Cost Management Reader and Reader roles on your subscription
+3. Enter credentials in Settings > Azure Connection
+4. Click "Connect to Azure"
 
-1. Go to **your Subscription > Access control (IAM) > Add role assignment**
-2. Add **Cost Management Reader** role to your App Registration
-3. Add **Reader** role to your App Registration
+The mode indicator changes from "DEMO" to "LIVE" when connected.
 
-### Connect in Dashboard
+### Conditional Access Workaround
 
-1. Open dashboard, go to **Settings** tab
-2. Enter Tenant ID, Client ID, Client Secret, Subscription ID
-3. Click **Connect to Azure**
+If your organization blocks service principals with Conditional Access:
 
-The badge changes from "DEMO DATA" to "LIVE DATA" when connected.
+1. Export recommendations from Azure Portal > Advisor > Download as CSV
+2. Go to Settings > Manual Data Import
+3. Paste the CSV content
+4. AI agents will analyze the imported data
 
-### Conditional Access Blocked?
+---
 
-If your organization blocks service principals:
+## Technology Stack
 
-**Option A: Request Exception**
-- Contact your Azure AD admin with: App name "FinOps Dashboard", Client ID, justification "Automated FinOps governance"
-- Request exclusion from MFA policies (service principals use client credentials, not user auth)
+- **Frontend**: React 18, TypeScript, Tailwind CSS, Recharts, Lucide Icons
+- **Backend**: FastAPI, SQLite, SQLAlchemy, APScheduler
+- **AI**: Azure OpenAI (GPT-5, O3, O4-Mini, GPT-4.1)
+- **Azure SDKs**: azure-mgmt-costmanagement, azure-mgmt-advisor, azure-mgmt-consumption
 
-**Option B: Use Offline Import**
-- Export recommendations from Azure Portal > Advisor > Download as CSV
-- Paste into Settings > Manual Data Import
-- AI agents still analyze and provide recommendations
-
-## RI/SP Decision Workflow
-
-### 1. Review AI Recommendations
-
-Navigate to the RI/SP Optimizer tab. The AI-Powered Commitment Recommendations table shows all resources with:
-
-| Column | Description |
-|--------|-------------|
-| Resource | Azure resource name |
-| Workload | Matched business application (if registered) |
-| Type | VM, SQL, Kubernetes, GPU, etc. |
-| Monthly Cost | Current pay-as-you-go cost |
-| Risk | AI risk score (0-10) based on workload stability |
-| AI Action | Recommended commitment: 1-Year RI, 3-Year RI, 1-Year SP, 3-Year SP, or HOLD |
-| Reason | AI explanation for the recommendation |
-| Re-evaluate By | Date to revisit if on HOLD |
-| Your Decision | Approve, Hold, or Block buttons |
-
-### 2. Deep Dive with Document Upload
-
-Click any resource name to open the recommendation drawer:
-
-1. Review the AI Agent Analysis with risk score and confidence
-2. Upload supporting documents (contracts, vendor proposals, technical assessments)
-3. Click **Re-run AI Analysis** to incorporate document context
-4. Use Manual Override buttons to make your decision
-
-### 3. Track Your Decisions
-
-Your decisions are tracked in the Executive Summary's RI/SP Recommendation Actions card:
-- Total approved, on hold, and blocked counts
-- Approved savings (sum of monthly savings from approved recommendations)
-- Approval rate percentage
-
-### 4. Configure Discount Rates
-
-Go to **Settings > RI/SP Discount Settings** to configure your organization's discount percentages. Click **Save Discount Settings** to persist. All pricing in the RI/SP Optimizer recalculates automatically.
-
-### 5. Track SaaS Evaluations
-
-Before committing to a 3-year RI on SQL Server, make sure you're not about to migrate to a SaaS solution. The **Upcoming SaaS / Technology Evaluations** section lets you:
-
-1. Add evaluations with vendor name, affected workload, decision date, and adoption probability
-2. AI agents automatically HOLD commitments for affected resources
-3. When the evaluation completes, remove it and the HOLD is lifted
-
-## AI Agents
-
-The dashboard uses 5 specialized AI agents powered by Azure OpenAI:
-
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| Cost Sentinel | GPT-5 | Anomaly detection and cost spike analysis |
-| Commitment Advisor | O3 | RI/SP recommendation optimization |
-| Orphan Hunter | O4-Mini | Identify unused resources |
-| Right-Size Engine | GPT-4.1 | VM right-sizing recommendations |
-| SaaS Evaluator | GPT-5 | Technology evaluation risk assessment |
-
-Each agent provides:
-- Risk score (0-10)
-- Confidence level
-- Recommended action with reasoning
-- Re-evaluation date for HOLD decisions
-
-The multi-agent ensemble cross-validates recommendations to ensure accuracy and reduce false positives.
+---
 
 ## API Reference
 
@@ -305,11 +239,11 @@ The multi-agent ensemble cross-validates recommendations to ensure accuracy and 
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/recommendations` | GET | RI/SP recommendations with AI analysis |
-| `/api/recommendations/smart` | GET | Recommendations enriched with workload intelligence |
-| `/api/risp-actions` | GET | Summary of approve/hold/block actions |
-| `/api/risp-actions/{action}` | POST | Record an approve/hold/block decision |
-| `/api/discount-settings` | GET/PUT | Get or update discount percentages |
+| `/api/stats` | GET | Dashboard statistics |
+| `/api/recommendations` | GET | RI/SP recommendations |
+| `/api/risp-actions` | GET | Approve/hold/block summary |
+| `/api/risp-actions/{action}` | POST | Record a decision |
+| `/api/reallocation/opportunities` | GET | RI reallocation analysis |
 
 ### Azure Integration
 
@@ -317,95 +251,26 @@ The multi-agent ensemble cross-validates recommendations to ensure accuracy and 
 |----------|--------|-------------|
 | `/api/azure/health` | GET | Connection status |
 | `/api/azure/costs/daily` | GET | Daily cost breakdown |
-| `/api/azure/costs/by-service` | GET | Cost by Azure service |
-| `/api/azure/recommendations` | GET | Azure Advisor recommendations |
-| `/api/azure/budgets` | GET | Budget status from Azure |
+| `/api/discovery` | POST | Run resource discovery |
 
 ### Workload Intelligence
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/workloads` | GET/POST | List or create workloads |
-| `/api/evaluations` | GET/POST | List or create technology evaluations |
-| `/api/evaluations/{id}` | DELETE | Remove a technology evaluation |
-| `/api/evaluations/{id}/analyze` | POST | Run SaaS evaluator AI agent |
-| `/api/documents/upload` | POST | Upload supporting documents |
-| `/api/recommendations/{id}/reanalyze` | POST | Re-run AI analysis with document context |
+| `/api/workloads` | GET/POST | Workload registry |
+| `/api/evaluations` | GET/POST | SaaS evaluations |
+| `/api/evaluations/{id}/analyze` | POST | Run AI analysis |
 
-## Architecture
+---
 
-```
-finops-dashboard/
-├── finops-backend/          # FastAPI + SQLite
-│   ├── app/
-│   │   ├── main.py          # API routes
-│   │   ├── agents/          # AI agent implementations
-│   │   │   ├── base_agent.py
-│   │   │   ├── saas_evaluator.py
-│   │   │   └── __init__.py
-│   │   ├── services/        # Business logic
-│   │   │   ├── azure_client.py
-│   │   │   ├── cost_service.py
-│   │   │   ├── recommendation_service.py
-│   │   │   ├── intelligence_service.py
-│   │   │   └── document_service.py
-│   │   ├── models/          # SQLAlchemy models
-│   │   │   ├── cost_history.py
-│   │   │   └── workload_intelligence.py
-│   │   ├── jobs/            # Background jobs
-│   │   │   └── refresh_jobs.py
-│   │   ├── database.py      # Database configuration
-│   │   └── scheduler.py     # APScheduler configuration
-│   └── pyproject.toml
-├── finops-frontend/         # React + TypeScript
-│   ├── src/
-│   │   ├── App.tsx          # Main dashboard component
-│   │   └── App.css          # Styles
-│   └── package.json
-└── video_assets/            # Demo video and screenshots
-```
+## Open Source
 
-### Technology Stack
+This project is released as open source under the MIT License. It is provided **as-is** without warranty.
 
-- **Frontend**: React 18, TypeScript, Tailwind CSS, Recharts, Lucide Icons
-- **Backend**: FastAPI, SQLite, SQLAlchemy, APScheduler
-- **AI**: Azure OpenAI (GPT-5, O3, O4-Mini, GPT-4.1)
-- **Azure SDKs**: azure-mgmt-costmanagement, azure-mgmt-advisor, azure-mgmt-consumption
-- **Authentication**: Azure AD App Registration with client credentials
+Special thanks again to the **Azure Product Group** for their excellent APIs and documentation that made this project possible.
 
-### Database Schema
+---
 
-**Workloads Table**
-- id, name, description, owner_name, owner_email, status, criticality, is_demo, demo_scenario
+## Author
 
-**Technology Evaluations Table**
-- id, workload_id, name, vendor, evaluation_type, status, started_date, decision_date
-- adoption_probability_pct, poc_success_score, hold_commitments, hold_expires
-- affected_azure_services, executive_sponsor, is_demo, demo_scenario
-
-## Deployment
-
-### Backend (Fly.io)
-
-```bash
-cd finops-backend
-fly launch
-fly secrets set AZURE_OPENAI_ENDPOINT=... AZURE_OPENAI_API_KEY=...
-fly deploy
-```
-
-### Frontend (Static Hosting)
-
-```bash
-cd finops-frontend
-npm run build
-# Deploy dist/ folder to Vercel, Netlify, or any static host
-```
-
-## Contributing
-
-Created by Greg Katz.
-
-## License
-
-MIT License
+Created by Greg Katz as a personal project exploring agentic frameworks for FinOps.
